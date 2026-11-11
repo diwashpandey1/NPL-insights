@@ -17,6 +17,7 @@ import type { IngestionIssue } from '../src/ingestion/types/index.js';
 
 const localUrl = process.env.NPL_LOCAL_SUPABASE_URL;
 const localServiceRoleKey = process.env.NPL_LOCAL_SUPABASE_SERVICE_ROLE_KEY;
+const localAnonKey = process.env.NPL_LOCAL_SUPABASE_ANON_KEY;
 
 const matchHeaders = [
   'id', 'season', 'date', 'city', 'venue', 'stage', 'team_1', 'team_2',
@@ -113,9 +114,177 @@ function hashContent(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
+class TrackingIngestionRepository extends SupabaseIngestionRepository {
+  readonly runIds = new Set<string>();
+
+  override async createIngestionRun(input: { pipelineVersion: string; sourceSet: string }): Promise<{ id: string }> {
+    const run = await super.createIngestionRun(input);
+    this.runIds.add(run.id);
+    return run;
+  }
+}
+
+async function cleanupIntegrationRows(
+  client: ReturnType<typeof createClient>,
+  repository: TrackingIngestionRepository,
+  tempDirectory: string,
+  suffix: string,
+  baseline: {
+    teamIds: Set<string>;
+    seasonIds: Set<string>;
+    teamAliasIds: Set<string>;
+    playerIds: Set<string>;
+  },
+): Promise<void> {
+  const sourceFilesResult = await client.from('source_files')
+    .select('id,ingestion_run_id')
+    .like('logical_path', `%${path.basename(tempDirectory)}%`);
+  assert.ifError(sourceFilesResult.error);
+  const sourceFiles = sourceFilesResult.data ?? [];
+  const sourceFileIds = sourceFiles.map((sourceFile) => sourceFile.id);
+  const runIds = [...new Set([
+    ...repository.runIds,
+    ...sourceFiles.map((sourceFile) => sourceFile.ingestion_run_id),
+  ])];
+
+  if (runIds.length) {
+    const { error } = await client.from('ingestion_issues').delete().in('ingestion_run_id', runIds);
+    assert.ifError(error);
+  }
+
+  const deliveryRowsResult = sourceFileIds.length
+    ? await client.from('deliveries').select('id').in('source_file_id', sourceFileIds)
+    : { data: [], error: null };
+  assert.ifError(deliveryRowsResult.error);
+  const deliveryIds = (deliveryRowsResult.data ?? []).map((row) => row.id);
+  const dismissalRowsResult = deliveryIds.length
+    ? await client.from('dismissals').select('id').in('delivery_id', deliveryIds)
+    : { data: [], error: null };
+  assert.ifError(dismissalRowsResult.error);
+  const dismissalIds = (dismissalRowsResult.data ?? []).map((row) => row.id);
+  if (dismissalIds.length) {
+    const { error } = await client.from('dismissal_fielders').delete().in('dismissal_id', dismissalIds);
+    assert.ifError(error);
+    const { error: dismissalError } = await client.from('dismissals').delete().in('id', dismissalIds);
+    assert.ifError(dismissalError);
+  }
+  if (deliveryIds.length) {
+    const { error } = await client.from('deliveries').delete().in('id', deliveryIds);
+    assert.ifError(error);
+  }
+
+  const matchKeysResult = sourceFileIds.length
+    ? await client.from('match_source_keys').select('id,match_id').in('source_file_id', sourceFileIds)
+    : { data: [], error: null };
+  assert.ifError(matchKeysResult.error);
+  const matchIds = [...new Set((matchKeysResult.data ?? [])
+    .map((key) => key.match_id)
+    .filter((id): id is string => Boolean(id)))];
+  if (sourceFileIds.length) {
+    const { error } = await client.from('match_source_keys').delete().in('source_file_id', sourceFileIds);
+    assert.ifError(error);
+  }
+  if (matchIds.length) {
+    const { error } = await client.from('match_innings').delete().in('match_id', matchIds);
+    assert.ifError(error);
+    const { error: matchError } = await client.from('matches').delete().in('id', matchIds);
+    assert.ifError(matchError);
+  }
+  if (sourceFileIds.length) {
+    const { error } = await client.from('match_innings').delete().in('source_file_id', sourceFileIds);
+    assert.ifError(error);
+    const { error: sourceError } = await client.from('source_files').delete().in('id', sourceFileIds);
+    assert.ifError(sourceError);
+  }
+  if (runIds.length) {
+    const { error } = await client.from('ingestion_runs').delete().in('id', runIds);
+    assert.ifError(error);
+  }
+
+  const playerAliasResult = await client.from('player_aliases')
+    .select('id')
+    .eq('source_system', `integration-${suffix}`);
+  assert.ifError(playerAliasResult.error);
+  const playerAliasIds = (playerAliasResult.data ?? []).map((alias) => alias.id);
+  if (playerAliasIds.length) {
+    const { error } = await client.from('player_aliases').delete().in('id', playerAliasIds);
+    assert.ifError(error);
+  }
+  const playerRows = await client.from('players')
+    .select('id')
+    .eq('display_name', `Reviewed Integration Player ${suffix}`);
+  assert.ifError(playerRows.error);
+  const createdPlayerIds = (playerRows.data ?? []).map((player) => player.id)
+    .filter((id) => !baseline.playerIds.has(id));
+  if (createdPlayerIds.length) {
+    const { error } = await client.from('players').delete().in('id', createdPlayerIds);
+    assert.ifError(error);
+  }
+
+  const testAliases = await client.from('team_aliases')
+    .select('id')
+    .in('source_system', ['npl-match-feed', 'npl-master', `integration-${suffix}`])
+    .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts', 'chitwan rhinos']);
+  assert.ifError(testAliases.error);
+  const createdAliasIds = (testAliases.data ?? []).map((alias) => alias.id)
+    .filter((id) => !baseline.teamAliasIds.has(id));
+  if (createdAliasIds.length) {
+    const { error } = await client.from('team_aliases').delete().in('id', createdAliasIds);
+    assert.ifError(error);
+  }
+
+  const teamRows = await client.from('teams')
+    .select('id')
+    .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+  assert.ifError(teamRows.error);
+  const createdTeamIds = (teamRows.data ?? []).map((team) => team.id)
+    .filter((id) => !baseline.teamIds.has(id));
+  if (createdTeamIds.length) {
+    const { error } = await client.from('teams').delete().in('id', createdTeamIds);
+    assert.ifError(error);
+  }
+
+  const seasonKeys = ['2024/25', '2025/26', `2099/${suffix}`];
+  const seasonRows = await client.from('seasons').select('id').in('season_key', seasonKeys);
+  assert.ifError(seasonRows.error);
+  const createdSeasonIds = (seasonRows.data ?? []).map((season) => season.id)
+    .filter((id) => !baseline.seasonIds.has(id));
+  if (createdSeasonIds.length) {
+    const { error } = await client.from('seasons').delete().in('id', createdSeasonIds);
+    assert.ifError(error);
+  }
+
+  const remainingSources = await client.from('source_files')
+    .select('id')
+    .like('logical_path', `%${path.basename(tempDirectory)}%`);
+  assert.ifError(remainingSources.error);
+  assert.equal(remainingSources.data?.length, 0, `Test source files remain below ${path.basename(tempDirectory)}.`);
+  const remainingRuns = repository.runIds.size
+    ? await client.from('ingestion_runs').select('id').in('id', [...repository.runIds])
+    : { data: [], error: null };
+  assert.ifError(remainingRuns.error);
+  assert.equal(remainingRuns.data?.length, 0, 'Test ingestion runs remain after cleanup.');
+}
+
+async function assertLatestRunFailed(
+  client: ReturnType<typeof createClient>,
+  repository: TrackingIngestionRepository,
+): Promise<void> {
+  const runIds = [...repository.runIds];
+  const latestRunId = runIds[runIds.length - 1];
+  assert.ok(latestRunId);
+  const run = await client.from('ingestion_runs')
+    .select('status,finished_at')
+    .eq('id', latestRunId)
+    .single();
+  assert.ifError(run.error);
+  assert.equal(run.data.status, 'failed');
+  assert.ok(run.data.finished_at);
+}
+
 test('local PostgreSQL ingestion and repository integration', {
-  skip: !localUrl || !localServiceRoleKey
-    ? 'Set NPL_LOCAL_SUPABASE_URL and NPL_LOCAL_SUPABASE_SERVICE_ROLE_KEY for the disposable local stack.'
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
     : false,
 }, async () => {
   const parsedUrl = new URL(localUrl!);
@@ -124,7 +293,7 @@ test('local PostgreSQL ingestion and repository integration', {
   const client = createClient(localUrl!, localServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const repository = new SupabaseIngestionRepository();
+  const repository = new TrackingIngestionRepository();
   repository.client = client;
 
   const suffix = crypto.randomUUID().replace(/-/g, '');
@@ -132,8 +301,36 @@ test('local PostgreSQL ingestion and repository integration', {
   const matchId = String(numericId);
   const sourceSystem = `integration-${suffix}`;
   const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ingestion-pg-'));
+  const baseline = {
+    teamIds: new Set<string>(),
+    seasonIds: new Set<string>(),
+    teamAliasIds: new Set<string>(),
+    playerIds: new Set<string>(),
+  };
 
   try {
+    const teamBaseline = await client.from('teams')
+      .select('id')
+      .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+    assert.ifError(teamBaseline.error);
+    for (const team of teamBaseline.data ?? []) baseline.teamIds.add(team.id);
+    const seasonBaseline = await client.from('seasons')
+      .select('id')
+      .in('season_key', ['2024/25', '2025/26', `2099/${suffix}`]);
+    assert.ifError(seasonBaseline.error);
+    for (const season of seasonBaseline.data ?? []) baseline.seasonIds.add(season.id);
+    const aliasBaseline = await client.from('team_aliases')
+      .select('id')
+      .in('source_system', ['npl-match-feed', 'npl-master', sourceSystem])
+      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts', 'chitwan rhinos']);
+    assert.ifError(aliasBaseline.error);
+    for (const alias of aliasBaseline.data ?? []) baseline.teamAliasIds.add(alias.id);
+    const playerBaseline = await client.from('players')
+      .select('id')
+      .eq('display_name', `Reviewed Integration Player ${suffix}`);
+    assert.ifError(playerBaseline.error);
+    for (const player of playerBaseline.data ?? []) baseline.playerIds.add(player.id);
+
     const mainDirectory = path.join(tempDirectory, 'main');
     await fs.mkdir(mainDirectory);
     const initialDeliveries = [
@@ -250,8 +447,9 @@ test('local PostgreSQL ingestion and repository integration', {
       .eq('delivery_id', dismissedDeliveries.data![0]!.id);
     assert.ifError(dismissalRows.error);
     assert.equal(dismissalRows.data?.length, 1);
+    const initialDismissalId = dismissalRows.data![0]!.id;
     const fielderRows = await client.from('dismissal_fielders').select('fielder_no,player_id,fielder_name_raw')
-      .eq('dismissal_id', dismissalRows.data![0]!.id)
+      .eq('dismissal_id', initialDismissalId)
       .order('fielder_no');
     assert.ifError(fielderRows.error);
     assert.equal(fielderRows.data?.length, 2);
@@ -361,59 +559,121 @@ test('local PostgreSQL ingestion and repository integration', {
     assert.ifError(repeatedDeliveries.error);
     assert.equal(repeatedDeliveries.data?.length, 5);
 
-    const changedDeliveries = [
-      initialDeliveries[0]!,
-      { ...initialDeliveries[1]!, wide_runs: '2', extra_runs: '2', total_runs: '2' },
-      initialDeliveries[3]!,
-      makeDeliveryRow(numericId, 1, `New Replacing Delivery ${suffix}`, '0.4'),
-      initialDeliveries[4]!,
-    ];
+    const changedDeliveries = initialDeliveries.map((row) => ({ ...row }));
+    changedDeliveries[1] = {
+      ...changedDeliveries[1]!,
+      wide_runs: '2',
+      extra_runs: '2',
+      total_runs: '2',
+    };
     await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
     const changedReport = await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
     assert.equal(changedReport.successfullyInserted, 0);
-    assert.equal(changedReport.updatedRecords, 5);
-    assert.equal(changedReport.skippedRecords, 1);
-    const changedDeliverySource = changedReport.files.find((file) => file.sourceType === 'ball-by-ball');
-    assert.ok(changedDeliverySource);
-    const changedSourceRow = await client.from('source_files').select('id')
-      .eq('source_system', 'npl-master')
-      .eq('logical_path', deliveryLogicalPath)
-      .eq('content_sha256', changedDeliverySource.sha256)
-      .single();
-    assert.ifError(changedSourceRow.error);
-    assert.notEqual(changedSourceRow.data.id, initialDeliverySourceFileId);
-
-    const changedState = await client.from('deliveries')
-      .select('id,innings_no,delivery_no,source_file_id,source_row_number,batter_name_raw,wide_runs')
+    assert.ok(changedReport.updatedRecords > 0);
+    const modifiedDelivery = await client.from('deliveries')
+      .select('wide_runs,extra_runs,total_runs')
       .eq('match_id', canonicalMatchId)
-      .order('innings_no')
-      .order('delivery_no');
-    assert.ifError(changedState.error);
-    assert.equal(changedState.data?.length, 5);
-    assert.ok(changedState.data?.filter((row) => row.innings_no === 1).every((row) =>
-      row.source_file_id === changedSourceRow.data.id));
-    assert.equal(changedState.data?.find((row) => row.innings_no === 1 && row.delivery_no === 2)?.wide_runs, 2);
-    assert.equal(changedState.data?.find((row) => row.innings_no === 1 && row.delivery_no === 3)?.batter_name_raw, initialDeliveries[3]!.batsman);
+      .eq('innings_no', 1)
+      .eq('delivery_no', 2)
+      .single();
+    assert.ifError(modifiedDelivery.error);
+    assert.deepEqual(modifiedDelivery.data, { wide_runs: 2, extra_runs: 2, total_runs: 2 });
+
+    changedDeliveries[2] = {
+      ...changedDeliveries[2]!,
+      player_out: '',
+      dismissal_kind: '',
+      fielders: '',
+    };
+    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
+    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
+    const deliveryThree = await client.from('deliveries')
+      .select('id')
+      .eq('match_id', canonicalMatchId)
+      .eq('innings_no', 1)
+      .eq('delivery_no', 3)
+      .single();
+    assert.ifError(deliveryThree.error);
     const removedDismissals = await client.from('dismissals').select('id')
-      .eq('delivery_id', changedState.data!.find((row) => row.innings_no === 1 && row.delivery_no === 3)!.id);
+      .eq('delivery_id', deliveryThree.data.id);
     assert.ifError(removedDismissals.error);
     assert.equal(removedDismissals.data?.length, 0);
+    const removedFielders = await client.from('dismissal_fielders').select('fielder_no')
+      .eq('dismissal_id', initialDismissalId);
+    assert.ifError(removedFielders.error);
+    assert.equal(removedFielders.data?.length, 0);
 
-    const removedTailDeliveries = [changedDeliveries[0]!, changedDeliveries[1]!, changedDeliveries[2]!, changedDeliveries[4]!];
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, removedTailDeliveries), 'utf8');
-    const removedTailReport = await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
-    assert.equal(removedTailReport.updatedRecords, 4);
-    assert.equal(removedTailReport.skippedRecords, 1);
-    const afterRemoval = await client.from('deliveries')
-      .select('delivery_no,source_file_id,batter_name_raw')
+    changedDeliveries[2] = {
+      ...changedDeliveries[2]!,
+      player_out: `Changed Out ${suffix}`,
+      dismissal_kind: 'run out',
+      fielders: `Replacement Fielder One ${suffix};Replacement Fielder Two ${suffix}`,
+    };
+    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
+    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
+    const changedDismissal = await client.from('dismissals')
+      .select('id,dismissal_kind,player_out_name_raw')
+      .eq('delivery_id', deliveryThree.data.id)
+      .single();
+    assert.ifError(changedDismissal.error);
+    assert.equal(changedDismissal.data.dismissal_kind, 'run out');
+    assert.equal(changedDismissal.data.player_out_name_raw, `Changed Out ${suffix}`);
+    const replacementFielders = await client.from('dismissal_fielders')
+      .select('fielder_name_raw')
+      .eq('dismissal_id', changedDismissal.data.id)
+      .order('fielder_no');
+    assert.ifError(replacementFielders.error);
+    assert.deepEqual(replacementFielders.data?.map((row) => row.fielder_name_raw), [
+      `Replacement Fielder One ${suffix}`,
+      `Replacement Fielder Two ${suffix}`,
+    ]);
+
+    const withAddedDelivery = [
+      ...changedDeliveries,
+      makeDeliveryRow(numericId, 1, `Added Delivery ${suffix}`, '0.4'),
+    ];
+    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, withAddedDelivery), 'utf8');
+    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
+    const afterAddition = await client.from('deliveries')
+      .select('id,delivery_no,batter_name_raw')
       .eq('match_id', canonicalMatchId)
       .eq('innings_no', 1)
       .order('delivery_no');
-    assert.ifError(afterRemoval.error);
-    assert.equal(afterRemoval.data?.length, 4);
-    assert.equal(afterRemoval.data?.[3]?.delivery_no, 4);
-    assert.equal(afterRemoval.data?.[3]?.batter_name_raw, `New Replacing Delivery ${suffix}`);
-    assert.equal(afterRemoval.data?.[3]?.source_file_id, changedSourceRow.data.id);
+    assert.ifError(afterAddition.error);
+    assert.equal(afterAddition.data?.length, 5);
+    assert.equal(afterAddition.data?.[4]?.delivery_no, 5);
+    assert.equal(afterAddition.data?.[4]?.batter_name_raw, `Added Delivery ${suffix}`);
+
+    const beforeBlockedRemoval = afterAddition.data?.map((row) => ({ ...row })) ?? [];
+    const removedTailDeliveries = withAddedDelivery.slice(0, -1);
+    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, removedTailDeliveries), 'utf8');
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths }),
+      /Deletion reconciliation is not implemented; refusing to persist this file/,
+    );
+    await assertLatestRunFailed(client, repository);
+    const afterBlockedTailRemoval = await client.from('deliveries')
+      .select('id,delivery_no,batter_name_raw')
+      .eq('match_id', canonicalMatchId)
+      .eq('innings_no', 1)
+      .order('delivery_no');
+    assert.ifError(afterBlockedTailRemoval.error);
+    assert.deepEqual(afterBlockedTailRemoval.data, beforeBlockedRemoval);
+
+    const removedMiddleDeliveries = withAddedDelivery.filter((_, index) => index !== 1);
+    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, removedMiddleDeliveries), 'utf8');
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths }),
+      /Deletion reconciliation is not implemented; refusing to persist this file/,
+    );
+    await assertLatestRunFailed(client, repository);
+    const afterBlockedMiddleRemoval = await client.from('deliveries')
+      .select('id,delivery_no,batter_name_raw')
+      .eq('match_id', canonicalMatchId)
+      .eq('innings_no', 1)
+      .order('delivery_no');
+    assert.ifError(afterBlockedMiddleRemoval.error);
+    assert.deepEqual(afterBlockedMiddleRemoval.data, beforeBlockedRemoval);
 
     const base2025 = numericId + 100;
     const id2025 = base2025 + 32;
@@ -500,7 +760,7 @@ test('local PostgreSQL ingestion and repository integration', {
     const failureSource = await repository.registerSourceFile({
       ingestionRunId: failureRun.id,
       sourceSystem: 'npl-master',
-      logicalPath: `integration/${suffix}/failure.csv`,
+      logicalPath: logicalSourcePath(path.join(tempDirectory, 'failure.csv')),
       contentSha256: hashContent(`failure-${suffix}`),
       format: 'csv',
       seasonId: null,
@@ -543,7 +803,7 @@ test('local PostgreSQL ingestion and repository integration', {
       dismissal_kind: 'caught',
       fielders: 'Missing Fielder',
     });
-    const deliveryRecord = mapDeliveryRecord(baseRow, `integration/${suffix}/failure.csv`, 999);
+    const deliveryRecord = mapDeliveryRecord(baseRow, logicalSourcePath(path.join(tempDirectory, 'failure.csv')), 999);
     const failedBatch: DeliveryPersistenceInput = {
       delivery: deliveryRecord,
       matchId: canonicalMatchId,
@@ -557,7 +817,11 @@ test('local PostgreSQL ingestion and repository integration', {
       playerOutId: null,
       fielders: [{ playerId: '00000000-0000-4000-8000-000000000003', name: 'Missing Fielder' }],
     };
-    const deliveriesBeforeFailure = allDeliveries.data?.length ?? 0;
+    const deliveriesBeforeFailureQuery = await client.from('deliveries')
+      .select('id')
+      .eq('match_id', canonicalMatchId);
+    assert.ifError(deliveriesBeforeFailureQuery.error);
+    const deliveriesBeforeFailure = deliveriesBeforeFailureQuery.data?.length ?? 0;
     await assert.rejects(() => repository.persistDeliveryBatch([failedBatch]));
     const rollbackInnings = await client.from('match_innings').select('innings_no')
       .eq('match_id', canonicalMatchId)
@@ -610,7 +874,96 @@ test('local PostgreSQL ingestion and repository integration', {
     assert.equal(failedRunState.data.status, 'failed');
     assert.ok(failedRunState.data.finished_at);
   } finally {
-    await fs.rm(tempDirectory, { recursive: true, force: true });
+    try {
+      await cleanupIntegrationRows(client, repository, tempDirectory, suffix, baseline);
+    } finally {
+      await fs.rm(tempDirectory, { recursive: true, force: true });
+    }
+  }
+});
+
+test('local anonymous and authenticated clients cannot access ingestion metadata', {
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
+    : false,
+}, async () => {
+  const parsedUrl = new URL(localUrl!);
+  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname), 'Integration tests must use loopback Supabase only.');
+
+  const clientOptions = { auth: { autoRefreshToken: false, persistSession: false } };
+  const serviceClient = createClient(localUrl!, localServiceRoleKey!, clientOptions);
+  const anonymousClient = createClient(localUrl!, localAnonKey!, clientOptions);
+  const authenticatedClient = createClient(localUrl!, localAnonKey!, clientOptions);
+  const suffix = crypto.randomUUID().replace(/-/g, '');
+  const email = `npl-integration-${suffix}@example.test`;
+  const password = `${crypto.randomBytes(24).toString('base64url')}!`;
+  let userId: string | null = null;
+  let runId: string | null = null;
+
+  try {
+    const userCreation = await serviceClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    assert.ifError(userCreation.error);
+    assert.ok(userCreation.data.user);
+    userId = userCreation.data.user.id;
+
+    const signIn = await authenticatedClient.auth.signInWithPassword({ email, password });
+    assert.ifError(signIn.error);
+    assert.equal(signIn.data.user?.id, userId);
+
+    const privateRun = await serviceClient.from('ingestion_runs').insert({
+      pipeline_version: 'integration-rls-v1',
+      source_set: `rls-${suffix}`,
+      status: 'running',
+      summary: { test: true },
+    }).select('id').single();
+    assert.ifError(privateRun.error);
+    runId = privateRun.data.id;
+
+    for (const [label, client] of [
+      ['anonymous', anonymousClient],
+      ['authenticated', authenticatedClient],
+    ] as const) {
+      for (const table of ['ingestion_runs', 'source_files', 'ingestion_issues', 'match_source_keys'] as const) {
+        const { error } = await client.from(table).select('*').limit(1);
+        assert.ok(error, `${label} client unexpectedly read restricted table ${table}.`);
+        assert.equal(error.code, '42501', `${label} access to ${table} should be rejected by PostgreSQL privileges.`);
+      }
+
+      const { error: insertError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'unauthorized-test',
+        source_set: `unauthorized-${suffix}`,
+      });
+      assert.ok(insertError, `${label} client unexpectedly wrote an ingestion run.`);
+      assert.equal(insertError.code, '42501');
+    }
+
+    const rpcAttempt = await authenticatedClient.rpc('ingestion_ensure_season', {
+      p_season_key: `2098/${suffix}`,
+      p_label: `2098/${suffix}`,
+      p_source_season_year: 2098,
+    });
+    assert.ok(rpcAttempt.error, 'Authenticated client unexpectedly executed a service-only ingestion RPC.');
+    assert.equal(rpcAttempt.error.code, '42501');
+
+    const stillOnlyPrivateRun = await serviceClient.from('ingestion_runs')
+      .select('id')
+      .eq('source_set', `rls-${suffix}`);
+    assert.ifError(stillOnlyPrivateRun.error);
+    assert.deepEqual(stillOnlyPrivateRun.data?.map((row) => row.id), [runId]);
+  } finally {
+    await authenticatedClient.auth.signOut();
+    if (runId) {
+      const { error } = await serviceClient.from('ingestion_runs').delete().eq('id', runId);
+      assert.ifError(error);
+    }
+    if (userId) {
+      const { error } = await serviceClient.auth.admin.deleteUser(userId);
+      assert.ifError(error);
+    }
   }
 });
 

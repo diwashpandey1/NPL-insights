@@ -165,6 +165,36 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     rowCount: number;
   }): Promise<SourceFileRegistration> {
     const client = this.ensureClient();
+    const { data: priorFiles, error: priorFilesError } = await client.from('source_files')
+      .select('content_sha256,row_count,ingestion_run_id,loaded_at')
+      .eq('source_system', input.sourceSystem)
+      .eq('logical_path', input.logicalPath)
+      .order('loaded_at', { ascending: false });
+    if (priorFilesError) {
+      throw new Error(`Failed to inspect prior source files for ${input.logicalPath}: ${priorFilesError.message}`);
+    }
+
+    let previousSource: { content_sha256: string; row_count: number | null } | null = null;
+    if (priorFiles?.length) {
+      const runIds = [...new Set(priorFiles.map((file) => file.ingestion_run_id))];
+      const { data: successfulRuns, error: runsError } = await client.from('ingestion_runs')
+        .select('id')
+        .in('id', runIds)
+        .eq('status', 'succeeded');
+      if (runsError) {
+        throw new Error(`Failed to inspect prior ingestion runs for ${input.logicalPath}: ${runsError.message}`);
+      }
+
+      const successfulRunIds = new Set((successfulRuns ?? []).map((run) => run.id));
+      const previousFile = priorFiles.find((file) => successfulRunIds.has(file.ingestion_run_id));
+      if (previousFile) {
+        previousSource = {
+          content_sha256: previousFile.content_sha256,
+          row_count: previousFile.row_count,
+        };
+      }
+    }
+
     const { data, error } = await client.rpc('ingestion_register_source_file', {
       p_ingestion_run_id: input.ingestionRunId,
       p_source_system: input.sourceSystem,
@@ -191,6 +221,8 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       outcome: data.outcome,
       previousRunStatus: data.previousRunStatus,
       previousSummary: data.previousSummary,
+      previousSourceSha256: previousSource?.content_sha256 ?? null,
+      previousSourceRowCount: previousSource?.row_count ?? null,
     };
   }
 

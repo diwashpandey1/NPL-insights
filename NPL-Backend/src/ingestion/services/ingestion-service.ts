@@ -195,6 +195,19 @@ export async function runSeasonIngestion(
       }),
     ]);
 
+    const previousDeliveryRowCount = deliverySourceFile.previousSourceRowCount;
+    if (deliverySourceFile.previousSourceSha256
+      && deliverySourceFile.previousSourceSha256 !== inspected.files[0]!.sha256
+      && previousDeliveryRowCount !== null
+      && previousDeliveryRowCount !== undefined
+      && inspected.files[0]!.rowCount < previousDeliveryRowCount) {
+      throw new Error(
+        `Changed delivery source ${logicalSourcePath(dataPaths.ballByBallCsv)} has fewer rows `
+        + `(${inspected.files[0]!.rowCount}) than its last successful version (${previousDeliveryRowCount}). `
+        + 'Deletion reconciliation is not implemented; refusing to persist this file.',
+      );
+    }
+
     const deliveryFileUnchanged = sourceFileWasCompletedFor(deliverySourceFile, processedSeasons);
     const matchFileUnchanged = sourceFileWasCompletedFor(matchSourceFile, processedSeasons);
     if (deliveryFileUnchanged) unchanged += rawDeliveryRows.length;

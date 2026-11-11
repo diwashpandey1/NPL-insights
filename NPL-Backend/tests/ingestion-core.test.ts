@@ -387,6 +387,36 @@ test('changed delivery file reuses resolved matches and reports updated source p
   }
 });
 
+test('changed delivery files with removed source rows are blocked before canonical writes', async () => {
+  const fixture = await createFixture();
+  const state = createState();
+  const repository = createMockRepository(state);
+  const registerSourceFile = repository.registerSourceFile.bind(repository);
+  repository.registerSourceFile = async (input) => {
+    const registration = await registerSourceFile(input);
+    if (input.sourceSystem === 'npl-master') {
+      return {
+        ...registration,
+        previousSourceSha256: 'a'.repeat(64),
+        previousSourceRowCount: input.rowCount + 1,
+      };
+    }
+    return registration;
+  };
+
+  try {
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths }),
+      /Deletion reconciliation is not implemented; refusing to persist this file/,
+    );
+    assert.equal(state.matchAttempts, 0);
+    assert.equal(state.deliveryAttempts, 0);
+    assert.equal(state.failedRunFinalizations, 1);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 test('changed match metadata counts only the repository-confirmed update', async () => {
   const fixture = await createFixture();
   const state = createState();
@@ -571,7 +601,23 @@ test('source-file reconciliation sends stable path and hash and returns the prev
   const repository = new SupabaseIngestionRepository();
   let calledFunction = '';
   let rpcArgs: Record<string, unknown> = {};
+  const queryFor = (table: string) => {
+    const query = {
+      select: () => query,
+      eq: () => query,
+      order: () => query,
+      in: () => query,
+      then: (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) => Promise.resolve({
+        data: table === 'source_files'
+          ? [{ content_sha256: 'b'.repeat(64), row_count: 21, ingestion_run_id: 'prior-run' }]
+          : [{ id: 'prior-run' }],
+        error: null,
+      }).then(resolve, reject),
+    };
+    return query;
+  };
   repository.client = {
+    from: (table: string) => queryFor(table),
     rpc: async (name: string, args: Record<string, unknown>) => {
       calledFunction = name;
       rpcArgs = args;
@@ -602,6 +648,8 @@ test('source-file reconciliation sends stable path and hash and returns the prev
   assert.equal(result.id, 'source-file-id');
   assert.equal(result.previousRunStatus, 'completed_with_errors');
   assert.deepEqual(result.previousSummary, { processedSeasons: ['2024/25'] });
+  assert.equal(result.previousSourceSha256, 'b'.repeat(64));
+  assert.equal(result.previousSourceRowCount, 21);
 });
 
 test('repository surfaces team alias RPC errors instead of hiding partial writes', async () => {

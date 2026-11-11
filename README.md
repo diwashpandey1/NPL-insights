@@ -15,7 +15,7 @@ The workspace contains three independently runnable projects:
 3. **NPL-frontend** — a React dashboard prototype with league navigation, franchise assets, and pages for players, teams, matches, standings, and head-to-head comparisons.
 4. **ML** — a starter Python package structure for future model workflows; it reads from the processing project by configurable paths and does not duplicate its datasets.
 
-> **Current integration status:** These projects are not yet an operational end-to-end pipeline. The backend has an offline CSV ingestion worker and versioned Supabase schema, but PostgreSQL integration and data import are not yet verified. The backend has no cricket-data read endpoints, and the frontend's Axios client is configured but not called by its pages. The frontend displays explicit placeholders rather than live league data.
+> **Current integration status:** These projects are not yet an operational end-to-end pipeline. The backend has an offline CSV ingestion worker and versioned Supabase schema. Migrations, synthetic persistence/rollback, cleanup, and anonymous/authenticated permission checks passed twice against disposable local PostgreSQL; hosted Supabase has not been modified. Delivery files that shrink are blocked, but same-row-count replacements cannot reliably reveal deletions, so a full import is not approved. The backend has no cricket-data read endpoints, and the frontend's Axios client is configured but not called by its pages. The frontend displays explicit placeholders rather than live league data.
 
 ## Contents
 
@@ -38,15 +38,15 @@ flowchart TD
     F["NPL-frontend<br/>React analytics UI"]
 
     P -. "Local CSV outputs; offline ingestion worker implemented" .-> B
-    B -. "Versioned schema and ingestion persistence; PostgreSQL verification pending" .-> DB
+    B -. "Versioned schema and ingestion persistence; verified on disposable local PostgreSQL" .-> DB
     F -. "Axios base URL configured; pages do not call API" .-> B
 ```
 
 | Layer | Responsibility | Verified state |
 |---|---|---|
 | Data processing | Gather source data, normalize ball-by-ball data, calculate match/player/team statistics, and export analysis CSVs. | A consolidated 2024–2025 ball-by-ball dataset and numerous derived reports exist. The available 2026/27 JSON archive is not included in that consolidated dataset. |
-| Backend | Expose REST endpoints, validate requests, and provide controlled database access. | Express middleware, `GET /api/v1/health`, and an offline ingestion worker with a Supabase repository are implemented. Cricket-data read endpoints are not implemented. |
-| Database | Persist structured data for application queries. | Sixteen canonical tables and ingestion RPC migrations are versioned. Local PostgreSQL verification is in progress; no hosted database has been modified and no full data import is approved. |
+| Backend | Expose REST endpoints, validate requests, and provide controlled database access. | Express middleware, `GET /api/v1/health`, and an offline ingestion worker with a Supabase repository are implemented. Local PostgreSQL tests passed twice, including fixture teardown and authenticated/anonymous access denials. Shrinking source files are blocked pending a complete deletion policy. Cricket-data read endpoints are not implemented. |
+| Database | Persist structured data for application queries. | Seven migrations are applied to the disposable local stack; catalog checks verified all 16 canonical tables have RLS, and five service-only RPCs have the expected grants/security mode. Schema lint and synthetic persistence/rollback checks passed. Hosted Supabase was not accessed. |
 | Frontend | Present league data and analytics through responsive pages and visualizations. | The visual page structure, navigation, branding, team directory, and responsive styles exist. League records and statistics are placeholders; frontend pages do not make API requests. |
 | Machine learning | Prepare data, build features, train and evaluate models, and retain resulting artifacts. | `ML/` contains an initial folder and starter-file scaffold only. Model development and training have not started; source datasets remain in the processing project. |
 
@@ -66,13 +66,13 @@ Solid arrows are intentionally not implied: the dashed connections are planned i
 
 - The processing project contains a 2026/27 Cricsheet-format JSON season archive (12 match files), but the configured analysis loader and quality assertions target the 2024–2025 consolidated dataset.
 - `src/ml_feature_engineering.py` builds a feature matrix, and `outputs/ml/npl_features.csv` is present. This is feature preparation, not a trained or evaluated prediction model.
-- The backend has no cricket-data HTTP routes. Its offline ingestion worker supports CSV validation, season filtering, source reconciliation, and persistence calls, but live PostgreSQL behavior must be verified before an import is approved.
-- The backend has a versioned Supabase schema with RLS and restricted grants. Do not treat migrations, RPCs, or database integration as verified until local PostgreSQL checks pass; no hosted project has been modified.
+- The backend has no cricket-data HTTP routes. Its offline ingestion worker supports CSV validation, season filtering, source reconciliation, and persistence calls.
+- The backend's migrations, RPC grants/security mode, repository methods, and synthetic relationships/rollback have been checked against disposable local PostgreSQL. Removed source rows remain as historical canonical records; do not approve a full import until deletion/reconciliation policy is explicitly addressed. No hosted project has been modified.
 - The frontend pages provide the intended layout and some interface controls, but live player, match, standings, and comparison data have not been connected.
 
 ### Planned / not implemented
 
-- PostgreSQL verification of migrations, ingestion RPCs, transaction behavior, relationships, and idempotent retry handling.
+- Explicit policy and implementation for reconciling source rows removed from changed files, followed by any required expanded readiness testing before a full import.
 - REST endpoints for cricket statistics and frontend integration with those endpoints.
 - Verified, populated analytics pages and historical season comparisons.
 - Model training, evaluation, and prediction endpoints or UI.
@@ -128,7 +128,7 @@ The processing project has no root `requirements.txt` or `pyproject.toml`; Pytho
 
 | Technology | State |
 |---|---|
-| Supabase PostgreSQL | A conditional Supabase JS client, 16-table schema, and ingestion RPC migrations exist. Local database verification is in progress; hosted Supabase has not been modified. |
+| Supabase PostgreSQL | A conditional Supabase JS client, 16-table schema, and ingestion RPC migrations exist. Migrations and synthetic persistence/rollback flows were verified on disposable local PostgreSQL; hosted Supabase has not been modified. |
 
 ### Frontend
 
@@ -369,11 +369,12 @@ Checkboxes mark implementation verified in this workspace, not end-to-end accept
 
 - [x] Establish the Express/TypeScript application and a versioned health endpoint.
 - [x] Configure optional Supabase client creation from server environment variables.
-- [x] Design the Supabase PostgreSQL schema and write sequential migrations (not yet applied).
-- [ ] Apply and validate migrations on a disposable local Supabase stack; verify RPCs and database constraints.
-- [x] Implement the offline ingestion worker and mocked persistence tests; local PostgreSQL integration remains pending.
+- [x] Design the Supabase PostgreSQL schema and write sequential migrations.
+- [x] Apply and validate migrations on a disposable local Supabase stack; verify RPCs and database constraints.
+- [x] Implement the offline ingestion worker and mocked persistence tests; synthetic PostgreSQL integration is verified locally.
 - [ ] Add REST endpoints for players, teams, matches, standings, and analytics.
-- [ ] Add and run PostgreSQL integration tests for persistence, rollback, idempotency, and retry behavior.
+- [x] Add and run PostgreSQL integration tests for synthetic persistence, rollback, idempotency, and retry behavior.
+- [ ] Resolve removed-source-row reconciliation policy before full data import approval.
 
 ### Phase 3 — Frontend
 

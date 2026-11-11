@@ -24,6 +24,8 @@ export interface SourceFileRegistration {
   outcome: PersistenceAction;
   previousRunStatus: string | null;
   previousSummary: Record<string, unknown> | null;
+  previousSourceSha256?: string | null;
+  previousSourceRowCount?: number | null;
 }
 
 export interface SourceRowRecord {

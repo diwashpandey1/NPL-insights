@@ -29,12 +29,14 @@ the one-based source-row order within the canonical match and innings; repeated
 Delivery identity in the database is `(match_id, innings_no, delivery_no)`.
 Changed file content gets a different source-file identity, while the
 delivery upsert reuses that canonical sequence and refreshes source provenance.
-There is no deletion reconciliation: if source rows are removed, old canonical
-deliveries are not deleted. Since sequence numbers are assigned from source-row
-order, removing a row can also shift later deliveries onto existing sequence
-keys, updating those rows and leaving the old tail intact. Do not treat changed
-files with removed rows as a clean replacement until an explicit reconciliation
-policy is approved.
+There is no deletion reconciliation. The worker now rejects a changed delivery
+file whose total source row count is smaller than the most recently successful
+version, before persisting match or delivery changes. This prevents isolated
+tail and middle removals from shifting sequences or leaving stale tails, but
+does not identify a removal compensated by a new row when the file's total row
+count is unchanged. Treat such same-count replacements as ambiguous and do not
+ingest them; a full import remains blocked until stable source-record identity
+or an explicit reconciliation policy is implemented.
 
 ## Identity and persistence behavior
 
@@ -56,8 +58,10 @@ policy is approved.
 - Source-file registration hashes file bytes and reconciles by source system,
   relative logical path, and SHA-256. An unchanged file from a successful run
   is skipped for already processed canonical seasons. A changed file receives
-  a new source-file identity. Existing duplicate metadata is surfaced instead
-  of silently selecting one row.
+  a new source-file identity. Before registering a changed delivery file, the
+  repository reads the last successful source hash and row count; a smaller
+  changed file is failed and finalized before canonical writes. Existing
+  duplicate metadata is surfaced instead of silently selecting one row.
 - Repository outcomes are `inserted`, `updated`, `unchanged`, or `rejected`.
   The report counters use only these returned outcomes. A failed atomic batch
   is counted as failed for every source record in that batch; retry uses the
@@ -94,6 +98,15 @@ npm run ingest:season -- 2024/25
 npm run ingest:all
 ```
 
+For real PostgreSQL integration tests, start the disposable local Supabase
+stack, then set `NPL_LOCAL_SUPABASE_URL`, `NPL_LOCAL_SUPABASE_ANON_KEY`, and
+`NPL_LOCAL_SUPABASE_SERVICE_ROLE_KEY` from its local CLI status in the process
+environment. Never use hosted project credentials. `npm run test:integration`
+requires all three values, rejects non-loopback URLs, and exits with a
+`BLOCKED` status if the environment is unavailable. The regular `npm test`
+suite marks the database tests skipped when those values are absent; that is
+not database verification.
+
 Generated reports are written under `.ingestion/`, which is ignored by Git.
 Report paths are relative logical paths; they do not include local absolute
 paths. A dry run performs no database writes and checks the static match
@@ -102,43 +115,37 @@ crosswalk, but cannot verify database-backed aliases; reports mark this with
 
 ## Verification status (2026-11-11)
 
-Inspected the base commit `26662d8e2c1f346c923d7408bf29f0778d4d8b8b`.
-The current worktree also contains a targeted fix for a team-alias RPC rejection
-that legitimately omits the canonical `id`.
+Verified against the disposable local Supabase stack at commit
+`ec11d72dcf388ae4a50c0d120c8b0fb2d210aa85`. No hosted project was contacted.
 
-- `npm run typecheck` — passed.
-- `npm run build` — passed.
-- `npm test` — passed, 24 tests. These are unit and mocked repository tests;
-  they are not PostgreSQL integration tests.
-- Static review compared these TypeScript RPC callers with the SQL signatures:
+- Seven versioned migrations are applied in order. `supabase migration list
+  --local` reports each migration as applied; `supabase db lint --local`
+  reports no schema errors.
+- PostgreSQL catalog checks found 16 canonical tables, 16 primary keys,
+  35 foreign keys, 11 unique constraints, 53 checks, and 62 indexes. RLS is
+  enabled on all 16 tables. Service-role table grants and all five ingestion
+  RPC grants were verified; the RPCs are invoker functions and are not
+  executable by `anon` or `authenticated`.
+- `npm run typecheck` and `npm run build` — passed.
+- `npm test` — passed, 25 unit tests; the two PostgreSQL tests are skipped
+  without local credentials.
+- `npm run test:integration` without its required environment — correctly
+  reports `BLOCKED` and exits nonzero. With loopback-only local credentials,
+  it passed twice in separate executions (2/2 tests each): service-role
+  persistence, source replay, delivery/dismissal/fielder changes, additions,
+  tail and middle deletion blocking, source sequence stability, atomic batch
+  rollback/retry, and anonymous/authenticated permission denials.
+- Test teardown removed the fixture's source files, matches, deliveries,
+  innings, dismissals, aliases, player/season fixtures, ingestion issues/runs,
+  and temporary auth user. Post-run catalog queries found zero test-scoped
+  rows. Legacy records from earlier unscoped test executions were inspected
+  by their temporary fixture paths and removed from this disposable database.
 
-  | Function | SQL arguments | JSON result |
-  |---|---|---|
-  | `ingestion_ensure_season` | `p_season_key text`, `p_label text`, `p_source_season_year smallint` | Object with `id`, `outcome` |
-  | `ingestion_ensure_team_alias` | `p_team_key text`, `p_canonical_name text`, `p_source_system text`, `p_alias text`, `p_alias_normalized text` | Object with `outcome`; rejected results may omit `id` and `canonical_name` |
-  | `ingestion_register_source_file` | `p_ingestion_run_id uuid`, `p_source_system text`, `p_logical_path text`, `p_content_sha256 text`, `p_format text`, `p_season_id uuid`, `p_row_count bigint` | Object with `id`, `outcome`, nullable `previousRunStatus` and `previousSummary` |
-  | `ingestion_persist_match` | `p_match jsonb`, `p_source_key jsonb` | Object with `id`, `outcome` |
-  | `ingestion_persist_delivery_batch` | `p_records jsonb` | Array of objects with `id`, `outcome` |
-
-  The team-alias caller now handles the SQL rejection shape without an ID, with
-  a regression test. Nullable delivery identity and raw source fields are
-  covered by mocked tests. Runtime argument decoding, returned values,
-  permissions, and transaction behavior remain unverified.
-
-Database verification is blocked in the current environment. Docker is not
-running, `supabase status` cannot inspect the local stack, and
-`npx --yes supabase db lint --local` could not connect to PostgreSQL at
-`127.0.0.1:54322` (`ECONNREFUSED`). No migration was applied, no database was
-reset, and no hosted project was contacted. The migrations define 16 canonical
-tables, but their existence and constraints have not been verified in a live
-database. The synthetic ingestion, PostgreSQL relationship, idempotency,
-changed-file, rollback, and retry fixtures have not been run.
-
-Before attempting database verification, create or confirm an isolated,
-disposable local Supabase project. Do not use `db reset` against any local
-project that may contain data; it is destructive. In the disposable project,
-start Supabase, apply the ordered migrations, run `db lint`, and verify the
-catalog and RPC behavior before attempting synthetic ingestion fixtures.
+The regular test suite's skipped database tests are not a pass. These local
+integration results do not authorize a production import. A same-row-count
+source replacement can conceal a deletion because the source has no stable
+record identifier; such files remain ambiguous and must not be ingested until
+a full reconciliation policy is implemented.
 
 ## Interrupted ingestion runs
 
@@ -147,14 +154,13 @@ process interruption can leave an `ingestion_runs` row with `status = 'running'`
 and no `finished_at`. Operators can identify candidates by querying running
 rows and their `started_at`, then confirm the worker is no longer active and
 inspect its issues/source records before manually reconciling the run. Do not
-mark a run failed based on age alone. A retry should use the same source
-identities and rely on the repository's idempotent upserts; database retry
-behavior has not yet been verified.
+mark a run failed based on age alone. Atomic delivery batch rollback and safe
+retry were exercised against local PostgreSQL; forced process interruption
+and stale-run recovery automation remain untested and unimplemented.
 
 Do not point ingestion at hosted Supabase until separately authorized. Phase 2
-is not verified or approved for a controlled full import until migrations,
-RPCs, relationships, transaction rollback, idempotency, and retry behavior pass
-against disposable local PostgreSQL.
+is not approved for a controlled full import until same-count deletion
+ambiguity is resolved and stale-run recovery behavior is addressed.
 
 ## Known limitations
 
@@ -165,7 +171,8 @@ against disposable local PostgreSQL.
 - Unknown player names remain unresolved. Existing reviewed `player_aliases`
   must be loaded separately before those player foreign keys can resolve.
 - Deleted source rows are not reconciled or removed from canonical tables.
+  Decreased-row-count delivery files are blocked before canonical writes;
+  same-count replacements remain ambiguous.
 - Stale `running` jobs require manual identification and reconciliation.
-- No local database execution, successful migration validation, PostgreSQL
-  integration test, or hosted verification has been completed. Do not treat
-  successful TypeScript checks or mocked tests as database readiness.
+- No hosted database verification has been performed. Do not treat local
+  synthetic test results as authorization for hosted ingestion.
