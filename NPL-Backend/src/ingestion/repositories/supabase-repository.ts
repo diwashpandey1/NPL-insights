@@ -241,7 +241,13 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       p_alias_normalized: normalizeAlias(teamName),
     }) as RpcResult<{ id: string; canonical_name: string; outcome: PersistenceOutcome['outcome']; reason?: string }>;
     if (error) throw new Error(`Failed to resolve team alias ${teamName}: ${error.message}`);
-    if (!data?.id || !data.outcome) throw new Error(`Team alias resolution returned an invalid result for ${teamName}.`);
+    if (!data?.outcome) throw new Error(`Team alias resolution returned an invalid result for ${teamName}.`);
+    if (data.outcome === 'rejected') {
+      return { outcome: 'rejected', reason: data.reason };
+    }
+    if (!data.id || !data.canonical_name) {
+      throw new Error(`Team alias resolution returned an incomplete result for ${teamName}.`);
+    }
     return {
       outcome: data.outcome,
       data: { id: data.id, canonicalName: data.canonical_name },

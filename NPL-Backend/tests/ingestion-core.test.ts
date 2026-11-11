@@ -615,6 +615,21 @@ test('repository surfaces team alias RPC errors instead of hiding partial writes
   );
 });
 
+test('repository accepts a rejected team alias result without a canonical id', async () => {
+  const repository = new SupabaseIngestionRepository();
+  repository.client = {
+    rpc: async () => ({
+      data: { outcome: 'rejected', reason: 'The canonical team key and name refer to different existing teams.' },
+      error: null,
+    }),
+  } as unknown as NonNullable<typeof repository.client>;
+
+  assert.deepEqual(await repository.ensureTeam('Gurkhas', 'npl-master'), {
+    outcome: 'rejected',
+    reason: 'The canonical team key and name refer to different existing teams.',
+  });
+});
+
 test('delivery RPC mapping preserves dismissal, ambiguous fielder text, and nullable identities', async () => {
   const repository = new SupabaseIngestionRepository();
   let rpcArgs: Record<string, unknown> = {};
