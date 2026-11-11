@@ -7,7 +7,14 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "ingest:inspect": "tsx scripts/ingest.ts inspect",
+    "ingest:validate": "tsx scripts/ingest.ts validate",
+    "ingest:dry-run": "tsx scripts/ingest.ts dry-run",
+    "ingest:season": "tsx scripts/ingest.ts season",
+    "ingest:all": "tsx scripts/ingest.ts all",
+    "ingest:reprocess": "tsx scripts/ingest.ts reprocess",
+    "ingest:report": "tsx scripts/ingest.ts report"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.86.0",

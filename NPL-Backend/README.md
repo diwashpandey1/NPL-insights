@@ -38,6 +38,16 @@ Set `PORT`, `NODE_ENV`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in `.env
 - `npm run build` — compile TypeScript to `dist/`
 - `npm start` — run the compiled server
 - `npm run typecheck` — check types without emitting files
+- `npm run ingest:inspect` — inspect source files and their integrity metadata
+- `npm run ingest:validate` — validate the configured 2024/25 sources without writing to the database
+- `npm run ingest:dry-run` — generate an ingestion dry-run report from the current source feed
+- `npm run ingest:season -- 2024/25` — run the configured season ingest flow
+- `npm run ingest:all` — run all supported season inventory through the pipeline
+- `npm run ingest:report` — generate a human-readable ingestion report summary
+
+## Ingestion status
+
+The backend now includes a modular ingestion scaffold for the normalized 2024/25 delivery feed and NPL match feed under `src/ingestion/`. It validates source rows, canonicalizes known alias variants (for example, `Gorkhas`/`Gurkhas`), and produces actionable issue records without mutating the authoritative processing project. The 2026/27 Cricsheet archive is intentionally left out of the default run unless its mapping is explicitly reviewed.
 
 ## Health check
 
