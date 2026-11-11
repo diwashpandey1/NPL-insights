@@ -45,8 +45,8 @@ flowchart TD
 | Layer | Responsibility | Verified state |
 |---|---|---|
 | Data processing | Gather source data, normalize ball-by-ball data, calculate match/player/team statistics, and export analysis CSVs. | A consolidated 2024–2025 ball-by-ball dataset and numerous derived reports exist. The available 2026/27 JSON archive is not included in that consolidated dataset. |
-| Backend | Expose REST endpoints, validate requests, and provide controlled database access. | Express middleware and `GET /api/v1/health` are implemented. A Supabase client is constructed when credentials are configured, but no database queries, schema, ingestion, or cricket-data endpoints are present. |
-| Database | Persist structured data for application queries. | Supabase PostgreSQL is the configured target; no schema/migration or data-ingestion implementation is present in this workspace. |
+| Backend | Expose REST endpoints, validate requests, and provide controlled database access. | Express middleware and `GET /api/v1/health` are implemented. The initial Supabase schema is versioned in backend migrations, but the backend has no database queries, ingestion, or cricket-data endpoints. |
+| Database | Persist structured data for application queries. | The initial Supabase PostgreSQL schema and migrations are versioned; they have not been applied locally or to a hosted project, and no data has been ingested. |
 | Frontend | Present league data and analytics through responsive pages and visualizations. | The visual page structure, navigation, branding, team directory, and responsive styles exist. League records and statistics are placeholders; frontend pages do not make API requests. |
 | Machine learning | Prepare data, build features, train and evaluate models, and retain resulting artifacts. | `ML/` contains an initial folder and starter-file scaffold only. Model development and training have not started; source datasets remain in the processing project. |
 
@@ -67,11 +67,12 @@ Solid arrows are intentionally not implied: the dashed connections are planned i
 - The processing project contains a 2026/27 Cricsheet-format JSON season archive (12 match files), but the configured analysis loader and quality assertions target the 2024–2025 consolidated dataset.
 - `src/ml_feature_engineering.py` builds a feature matrix, and `outputs/ml/npl_features.csv` is present. This is feature preparation, not a trained or evaluated prediction model.
 - The backend has empty domain scaffolds for batting, bowling, head-to-head, matches, players, standings, and teams, but no cricket-data routes or services are implemented.
+- The backend has a versioned Supabase schema foundation with RLS and restricted grants. It has not been applied to a local or hosted database; no cricket data is loaded.
 - The frontend pages provide the intended layout and some interface controls, but live player, match, standings, and comparison data have not been connected.
 
 ### Planned / not implemented
 
-- A maintained ingestion path from processed datasets into Supabase, including schema design, database migrations, and repeatable validation.
+- Local migration validation and a maintained ingestion path from processed datasets into Supabase, including repeatable data validation.
 - REST endpoints for cricket statistics and frontend integration with those endpoints.
 - Verified, populated analytics pages and historical season comparisons.
 - Model training, evaluation, and prediction endpoints or UI.
@@ -127,7 +128,7 @@ The processing project has no root `requirements.txt` or `pyproject.toml`; Pytho
 
 | Technology | State |
 |---|---|
-| Supabase PostgreSQL | Configured as the intended database platform. A conditional Supabase JS client exists; database schema, migrations, queries, and ingestion are not implemented. |
+| Supabase PostgreSQL | Configured as the intended database platform. A conditional Supabase JS client and versioned schema migrations exist; migrations are not applied, and queries and ingestion are not implemented. |
 
 ### Frontend
 
@@ -368,7 +369,8 @@ Checkboxes mark implementation verified in this workspace, not end-to-end accept
 
 - [x] Establish the Express/TypeScript application and a versioned health endpoint.
 - [x] Configure optional Supabase client creation from server environment variables.
-- [ ] Design the Supabase PostgreSQL schema and migrations.
+- [x] Design the Supabase PostgreSQL schema and write sequential migrations (not yet applied).
+- [ ] Validate the migrations on a local Supabase stack and review any hosted deployment.
 - [ ] Implement validated data ingestion from processed datasets.
 - [ ] Add REST endpoints for players, teams, matches, standings, and analytics.
 - [ ] Add endpoint and database integration tests.

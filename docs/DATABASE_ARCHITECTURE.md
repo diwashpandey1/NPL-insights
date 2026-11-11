@@ -1,7 +1,8 @@
 # NPL Insights Database Architecture
 
-**Status:** planning blueprint only. No application, dataset, Supabase project, or
-database schema was modified for this document.
+**Status:** The initial database foundation is versioned in
+`NPL-Backend/supabase/migrations/`. Those migrations have not been applied to a
+local or hosted database. No application code or dataset was modified.
 
 ## 1. Current-state assessment
 
@@ -15,7 +16,9 @@ The workspace is a set of separate projects, not an end-to-end running platform:
   parsing, security/logging middleware, centralized error handling, and
   `GET /api/v1/health`. Its Supabase JS client is created conditionally from
   `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; there are no database
-  repositories, queries, cricket endpoints, or ingestion code yet.
+  repositories, queries, cricket endpoints, or ingestion code yet. The initial
+  relational schema is now versioned under `supabase/migrations/`, but has not
+  been applied to a database.
 - **`NPL-frontend/`** has six routed placeholder pages and an Axios client, but
   the pages do not call the API. Team marks/names and season selection are
   static. Its selector offers 2024, 2025, and 2026 and defaults to 2026.
@@ -172,11 +175,11 @@ it. ERD omits those derived views for readability.
 Types below are PostgreSQL types. `id uuid` columns use
 `gen_random_uuid()` as the proposed default. Names are lowercase snake_case.
 All foreign-key columns should have supporting indexes where no primary or
-unique index already supplies one. These are specifications, not migration SQL.
+unique index already supplies one. The initial migration implementation is
+documented in `NPL-Backend/supabase/README.md`; it has not yet been applied.
 
 ### Canonical entities
 
-|---|---|---|
 | Table / purpose | Columns (type; `PK`, `FK`, `UQ` noted) | Constraints, indexes, relationships |
 |---|---|---|
 | `seasons` — competition-season dimension | `id uuid PK`; `season_key text UQ NOT NULL` (e.g. `2024/25`); `label text NOT NULL`; `source_season_year smallint NULL`; `start_date date NULL`; `end_date date NULL`; `coverage_status text NOT NULL` (`unknown`, `partial`, `complete`); `created_at timestamptz NOT NULL` | Unique `season_key`; check end date is not before start date. Parent of matches, player-team affiliations, and standing snapshots. Keep source year separate from public season label; source feeds may encode season as a year only. |
@@ -191,7 +194,7 @@ unique index already supplies one. These are specifications, not migration SQL.
 | Table / purpose | Columns (type; `PK`, `FK`, `UQ` noted) | Constraints, indexes, relationships |
 |---|---|---|
 | `matches` — canonical match metadata and result | `id uuid PK`; `season_id uuid FK NOT NULL`; `match_number integer NULL`; `match_date date NULL`; `start_time time NULL`; `venue_name text NULL`; `city text NULL`; `stage text NULL`; `team_a_id uuid FK NULL`; `team_b_id uuid FK NULL`; `toss_winner_team_id uuid FK NULL`; `toss_decision text NULL`; `winner_team_id uuid FK NULL`; `result_text text NULL`; `win_by_runs integer NULL`; `win_by_wickets integer NULL`; `dls_applied boolean NULL`; `super_over boolean NULL`; `player_of_match_id uuid FK NULL`; `match_status text NOT NULL DEFAULT 'unknown'`; `created_at timestamptz NOT NULL`; `updated_at timestamptz NOT NULL` | Index `(season_id, match_date DESC)`, each team FK, `winner_team_id`, and `venue_name` if used for filtering. Check non-negative margins; if both teams are present they differ; if winner/toss winner is present it must be one of the two teams. Do not unique `(season_id, match_number)` until source collisions are resolved. |
-| `match_source_keys` — source-to-canonical match crosswalk | `id uuid PK`; `match_id uuid FK NOT NULL`; `source_file_id uuid FK NOT NULL`; `source_system text NOT NULL`; `source_season_key text NOT NULL` (empty string only when absent); `external_match_key text NOT NULL`; `disambiguator text NOT NULL DEFAULT ''`; `source_row_number bigint NOT NULL`; `resolution_status text NOT NULL` (`resolved`, `ambiguous`, `rejected`) | Unique `(source_file_id, source_row_number)`; unique `(source_system, source_season_key, external_match_key, disambiguator)` for resolved crosswalk keys; index `(source_system, external_match_key)`. Do not promote an ambiguous raw ID to a canonical key. Disambiguators must be stable/reviewed (season/team/date crosswalk), not guessed from a duplicate row. |
+| `match_source_keys` — source-to-canonical match crosswalk | `id uuid PK`; `match_id uuid FK NULL`; `source_file_id uuid FK NOT NULL`; `source_system text NOT NULL`; `source_season_key text NOT NULL` (empty string only when absent); `external_match_key text NOT NULL`; `disambiguator text NOT NULL DEFAULT ''`; `source_row_number bigint NOT NULL`; `resolution_status text NOT NULL` (`resolved`, `ambiguous`, `rejected`) | Unique `(source_file_id, source_row_number)`; `match_id` is required only when `resolution_status = 'resolved'`; a partial unique index applies `(source_system, source_season_key, external_match_key, disambiguator)` only to resolved keys; index `(source_system, external_match_key)`. This nullable FK is an implementation clarification so ambiguous/rejected source rows can be preserved without an invented canonical match. Disambiguators must be stable/reviewed (season/team/date crosswalk), not guessed from a duplicate row. |
 | `match_innings` — innings identity and batting/bowling sides | `match_id uuid FK NOT NULL`; `innings_no smallint NOT NULL`; `batting_team_id uuid FK NULL`; `bowling_team_id uuid FK NULL`; `is_super_over boolean NOT NULL DEFAULT false`; `source_file_id uuid FK NULL` | PK `(match_id, innings_no)`; check `innings_no > 0`; indexes batting and bowling team IDs. Supports innings beyond 1/2, including super overs. The table stores the innings identity and teams; totals are derived from deliveries or reconciled from source summaries. |
 | `deliveries` — ordered ball-by-ball source facts | `id bigint GENERATED ALWAYS AS IDENTITY PK`; `match_id uuid NOT NULL`; `innings_no smallint NOT NULL`; `delivery_no integer NOT NULL`; `source_file_id uuid FK NOT NULL`; `source_row_number bigint NOT NULL`; `over_number smallint NULL`; `ball_in_over smallint NULL`; `source_ball_label text NULL`; `ball_result text NULL`; `shot_direction text NULL`; `bowler_id uuid FK NULL`; `batter_id uuid FK NULL`; `non_striker_id uuid FK NULL`; `bowler_name_raw text NULL`; `batter_name_raw text NULL`; `non_striker_name_raw text NULL`; `batter_runs smallint NULL`; `wide_runs smallint NULL`; `no_ball_runs smallint NULL`; `bye_runs smallint NULL`; `leg_bye_runs smallint NULL`; `extra_runs smallint NULL`; `total_runs smallint NULL` | FK `(match_id, innings_no)` to innings; unique `(match_id, innings_no, delivery_no)`; unique `(source_file_id, source_row_number)` within the imported source file; indexes `(batter_id, match_id)`, `(bowler_id, match_id)`, and `non_striker_id`. Non-negative numeric checks where known. `delivery_no` is source order, not a parsed over-ball label. Preserve raw name strings for unresolved identity/audit. Unknown numeric values remain NULL until confirmed; zero means known zero. |
 | `dismissals` — normalized wicket events | `id bigint GENERATED ALWAYS AS IDENTITY PK`; `delivery_id bigint FK NOT NULL`; `dismissal_no smallint NOT NULL`; `player_out_id uuid FK NULL`; `player_out_name_raw text NULL`; `dismissal_kind text NOT NULL`; `source_file_id uuid FK NULL` | Unique `(delivery_id, dismissal_no)`; index `(player_out_id)` and `(dismissal_kind)`. Supports multiple dismissals on one delivery even though the current consolidated CSV has one `player_out` field. Do not credit all dismissals to a bowler; dismissal-kind rules determine that derived statistic. |
@@ -221,9 +224,13 @@ unique index already supplies one. These are specifications, not migration SQL.
 
 `security_invoker` should be used for any exposed PostgreSQL view on a
 PostgreSQL version that supports it; otherwise keep analytics views out of
-untrusted access paths or grant access only through the backend. In Supabase,
-enable RLS on tables in exposed schemas and grant only the read/write access
-required by the chosen API model.
+untrusted access paths or grant access only through the backend. The initial
+migrations enable RLS on all 16 tables, add no RLS policies, revoke table and
+identity-sequence access from `PUBLIC`, `anon`, and `authenticated`, and grant
+the backend-only `service_role` access. This deliberately denies Data-API
+access to normal client roles until a public read policy is approved. The
+service-role key remains server-only. Any future policy or public grant
+requires an explicit access-model review.
 
 ## 4. CSV-to-database mapping
 
@@ -234,7 +241,7 @@ required by the chosen API model.
 | `data/raw/source/csv_data/NPL-2024.csv` | `match_id, inning, batting_team, bowling_team, ball_over, ball_result, bowler, batsman, non_striker, shot_direction, player_dismissed, dismissal_kind, fielder, batsman_runs, wide_runs, bye_runs, legbye_runs, noball_runs, extra_runs, total_runs` | Candidate source. Stage first. Rename `player_dismissed` to dismissed-player input and `fielder` to fielders; resolve source match ID to canonical match; create innings and ordered deliveries. The current merge script references a different (currently missing) `user_provided_archive` path. | Confirm this file is the same source/version as the script's referenced input before rebuild. Match ID is season-local; retain source row order. Preserve raw names and nulls. |
 | `data/raw/source/csv_data/NPL-2025.csv` | `match_no, inning, batting_team, bowling_team, ball_over, ball_result, bowler, batter, non_striker, shot_direction, player_out, dismissal_kind, fielders, batsman_runs, wide_runs, bye_runs, legbye_runs, noball_runs, extra_runs, total_runs` | Candidate source. Stage first. Map `match_no` and `batter` to canonical source-key/striker fields; map `player_out`/`fielders`; resolve to the same canonical model as 2024. The current merge script references a different (currently missing) `user_provided_archive` path. | Confirm source equivalence before rebuild. Do not assume a `match_no` is globally unique. Compare aliases and delivery totals with match sources. |
 | `data/processed/combined/merged_npl_2024_2025.csv` | 22 master columns listed in §1 | Preferred first historical delivery import after revalidation. `match_id` is an external key, `season`/`match_number` are crosswalk hints, `inning` maps to `match_innings`, delivery row order determines `delivery_no`. | This is processed output, not authoritative identity proof. Recheck all numeric components and source null semantics; preserve raw file hash and line numbers. |
-| `data/raw/source/csv_data/NPL-matches.csv` | 30 columns listed in §1 | Stage and normalize into `matches`, `match_source_keys`, and team/player aliases. Parse date/time, result, DLS/super-over, scores, margins, toss, and player of match. Venue/city/stage remain text initially. | Match ID collisions and a documented one-run score disagreement block blind upsert. Use reviewed crosswalk and retain source values separately from delivery-derived sums. |
+| `data/raw/source/csv_data/NPL-matches.csv` | 30 columns listed in §1 | Stage and normalize into `matches`, `match_source_keys`, and team/player aliases. Parse date/time, result, DLS/super-over, scores, margins, toss, and player of match. Venue/city/stage remain text initially. | Match ID collisions and a documented one-run score disagreement block blind upsert. Use a reviewed crosswalk. The foundation stores the immutable source-file fingerprint/path, not duplicate per-source scorecards; reconciliation must retain differences in ingestion issues or a future source-fact table if queryable score history is required. |
 | `data/raw/source/csv_data/npl_2025_batting_summary.csv` | Columns listed in §1 | Do not load as canonical batting facts. Use as an independent comparison for runs, balls, boundaries, strike rate, dismissal/not-out status, and match mapping. | `out/not_out`, `teamInnings`, `battingPos`, and unit conventions need explicit parsing/validation. Source is one season only. |
 | `data/raw/source/csv_data/npl_2025_bowling_summary.csv` | Columns listed in §1 | Do not load as canonical bowling facts. Compare derived bowler/innings figures against delivery aggregates. | Overs may be decimal-looking cricket notation, not decimal fractions; reconcile legal balls and extra rules. |
 | `data/raw/source/csv_data/npl_2025_match_summary.csv` | Columns listed in §1 | Cross-check `matches` date, teams, winner, margin, and ground; map `match_id` only after resolving source IDs. | Text date/margin parsing and duplicate IDs require review. |
@@ -561,9 +568,10 @@ not persist the current feature matrix as canonical player/match statistics.
    2024 score discrepancy, Kathmandu spelling aliases, and exact-duplicate
    delivery candidates. Confirm complete-match coverage for 2024/25 and what
    the 2026/27 archive represents.
-3. **Approve schema and access model.** Finalize normalized entities,
-   constraints, indexes, Data API exposure, RLS/grants, and a documented
-   read-only/public-data policy before writing migrations.
+3. **Validate and apply the database foundation.** Review the versioned schema,
+   verify it against a disposable local Supabase stack, and approve a hosted
+   project/access plan before any remote migration. The current RLS/grant setup
+   intentionally has no public policies.
 4. **Build staging/validation outside the processing pipeline.** Create a
    versioned importer that reads the existing artifacts read-only, writes
    ingestion audit records, and has fixtures for duplicates, conflicts,
