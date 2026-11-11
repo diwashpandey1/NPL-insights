@@ -9,6 +9,7 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test",
+    "test:integration": "tsx --test tests/ingestion-postgres.integration.test.ts",
     "ingest:inspect": "tsx scripts/ingest.ts inspect",
     "ingest:validate": "tsx scripts/ingest.ts validate",
     "ingest:dry-run": "tsx scripts/ingest.ts dry-run",
