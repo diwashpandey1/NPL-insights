@@ -1,10 +1,11 @@
 import { formatIssueCode, normalizeSeasonValue } from '../utils/normalization.js';
+import { supportedSeasonSelections } from '../config/ingestion.config.js';
 import type { DeliveryRecord, IngestionIssue, IngestionReport, MatchRecord } from '../types/index.js';
 
 export function validateSeasonSelection(seasonSelection: string): boolean {
-  const allowed = new Set(['2024', '2025', '2024/25', '2025/26', 'all']);
+  const allowed = new Set(supportedSeasonSelections);
   const value = seasonSelection.trim().toLowerCase();
-  return value === '' || allowed.has(value) || allowed.has(value.replace(/-/g, '/'));
+  return allowed.has(value) || allowed.has(value.replace(/-/g, '/'));
 }
 
 export function validateMatchRecord(record: MatchRecord, issues: IngestionIssue[]): boolean {
@@ -106,6 +107,9 @@ export function buildReport(
     issues,
     files,
     sourceSet,
+    processedSeasons: [],
+    sourceYears: [],
+    identityResolutionPerformed: false,
     dryRun,
   };
 }

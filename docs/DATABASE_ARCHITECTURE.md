@@ -1,8 +1,9 @@
 # NPL Insights Database Architecture
 
-**Status:** The initial database foundation is versioned in
-`NPL-Backend/supabase/migrations/`. Those migrations have not been applied to a
-local or hosted database. No application code or dataset was modified.
+**Status:** The canonical schema and an offline ingestion worker are versioned
+in `NPL-Backend/`. The migrations have not been applied to a local or hosted
+database, so the SQL/RPC integration remains unverified. No application code
+outside the backend or source dataset was modified for the ingestion work.
 
 ## 1. Current-state assessment
 
@@ -12,13 +13,13 @@ The workspace is a set of separate projects, not an end-to-end running platform:
   2024–2025 delivery CSV, analysis code, generated CSV reports, and a separate
   feature-engineering workflow. Processing uses local files and does not connect
   to Supabase.
-- **`NPL-Backend/`** is an Express 5/TypeScript scaffold. It has environment
+- **`NPL-Backend/`** is an Express 5/TypeScript scaffold with environment
   parsing, security/logging middleware, centralized error handling, and
-  `GET /api/v1/health`. Its Supabase JS client is created conditionally from
-  `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; there are no database
-  repositories, queries, cricket endpoints, or ingestion code yet. The initial
-  relational schema is now versioned under `supabase/migrations/`, but has not
-  been applied to a database.
+  `GET /api/v1/health`. It now also has an offline CSV ingestion worker and
+  Supabase repository. The Supabase JS client remains server-side and is
+  created conditionally from `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+  The relational schema and ingestion RPC migration are versioned but have not
+  been applied to a database; there are no new cricket API endpoints.
 - **`NPL-frontend/`** has six routed placeholder pages and an Axios client, but
   the pages do not call the API. Team marks/names and season selection are
   static. Its selector offers 2024, 2025, and 2026 and defaults to 2026.
@@ -92,7 +93,9 @@ Treat these as reconciliation tasks, not as clean data guarantees:
    the delivery and match feeds. Match-level identifiers and scorecards must
    be crosswalked before import.
 2. The methodology reports a `Gorkhas`/`Gurkhas` team spelling difference
-   between sources. Team aliases are not currently canonicalized.
+   between sources. The ingestion worker maps the configured known spellings
+   and records source-specific aliases, but the mappings still require review
+   against a database before production ingestion.
 3. There are repeated `(match_id, inning, ball_over)` labels, which can be
    legitimate for wides/no-balls, and documented exact duplicate instances.
    The existing label is not a unique delivery key. Do not silently drop
@@ -343,10 +346,48 @@ the observed headers.
 
 ## 5. Data ingestion architecture
 
-Implement ingestion later as a versioned, repeatable offline job, not as a
-public API endpoint. It should read a selected source set and emit a durable
-run report. Keep source files immutable; do not modify the processing pipeline
-or its outputs as part of this design.
+The current implementation is a versioned, repeatable offline job, not a
+public API endpoint. It reads the consolidated delivery CSV and match-feed CSV,
+emits a report, and does not modify the processing pipeline or source data.
+
+### Implemented behavior and limits
+
+- Source `season` values are the year strings `2024` and `2025`, not the
+  tournament labels. Selection maps `2024`/`2024/25` to source year `2024` and
+  canonical season `2024/25`; `2025`/`2025/26` maps to source year `2025` and
+  canonical season `2025/26`; `all` selects both. These mappings are shared by
+  parser filtering, canonical season creation, and report fields.
+- The observed match-ID crosswalk is direct for 2024 and +32 for 2025. Because
+  2025 match-feed ID `42` occurs twice and ID `43` is absent, delivery match
+  numbers 10 and 11 are not assigned to a canonical match. Team-pair evidence
+  is checked before a delivery group is accepted.
+- The worker preserves physical CSV row numbers, original source match IDs,
+  delivery labels, unresolved raw player names, and relative file paths plus
+  SHA-256 hashes. Delivery sequence is source row order within match/innings,
+  not `ball_over`; equal labels are kept.
+- Canonical match/source-key writes, season/team-alias ensure, source-file
+  registration, and delivery/innings/dismissal/fielder batches use service-role
+  RPCs in a single PostgreSQL statement transaction. Individual RPCs have not
+  been executed against PostgreSQL yet. The delivery-feed source-key association
+  is a separate checked database request; dependent deliveries are withheld if
+  it fails.
+- Player matching uses reviewed source-specific `player_aliases` only. The
+  worker does not create players or aliases on a miss; unresolved names stay
+  raw with review issues and null canonical player IDs. The explicit reviewed
+  alias writer checks existing mappings and reports conflicts.
+- Source file hashes are reconciled by source system, relative logical path,
+  and SHA-256. A successful unchanged source is skipped for seasons recorded
+  in its prior run. Changed files create a new source-file identity and reuse
+  canonical match/innings/delivery keys. Deleted-row reconciliation for changed
+  files is not implemented.
+- `player_season_teams`, player creation from roster evidence, standings,
+  full source-file history, and local/hosted database verification are not
+  implemented. Therefore this worker is not approved as a complete Phase 2
+  ingestion integration.
+
+See `NPL-Backend/src/ingestion/README.md` for current commands, tests, and
+operational limitations. The workflow below remains the target/reconciliation
+guidance; it is not a claim that every listed validation has already run.
 
 1. **Register inputs.** Record source system, logical path, expected season,
    format, schema version, and SHA-256. A changed hash is a new source version,

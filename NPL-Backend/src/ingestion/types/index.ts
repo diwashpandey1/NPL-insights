@@ -8,6 +8,22 @@ export interface IngestionIssue {
   rowNumber?: number;
   entityName?: string;
   columnName?: string;
+  sourceFileId?: string;
+}
+
+export type PersistenceAction = 'inserted' | 'updated' | 'unchanged' | 'rejected';
+
+export interface PersistenceOutcome<T = undefined> {
+  outcome: PersistenceAction;
+  data?: T;
+  reason?: string;
+}
+
+export interface SourceFileRegistration {
+  id: string;
+  outcome: PersistenceAction;
+  previousRunStatus: string | null;
+  previousSummary: Record<string, unknown> | null;
 }
 
 export interface SourceRowRecord {
@@ -81,5 +97,8 @@ export interface IngestionReport {
     sourceType: 'ball-by-ball' | 'match' | 'unknown';
   }>;
   sourceSet: string;
+  processedSeasons: string[];
+  sourceYears: string[];
+  identityResolutionPerformed: boolean;
   dryRun: boolean;
 }

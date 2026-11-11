@@ -14,7 +14,12 @@ export const defaultDataPaths = {
   rawCricsheetDirectory: path.join(processingRoot, 'data', 'raw', 'cricsheet', 'npl_json'),
 };
 
-export const supportedSeasonSelections = ['2024', '2025', '2024/25', '2025/26'];
+export const supportedSeasonSelections = ['2024', '2024/25', '2025', '2025/26', 'all'];
+
+export const sourceSeasonMappings: Record<string, { sourceYear: string; canonicalSeasonKey: string; matchIdOffset: number }> = {
+  '2024': { sourceYear: '2024', canonicalSeasonKey: '2024/25', matchIdOffset: 0 },
+  '2025': { sourceYear: '2025', canonicalSeasonKey: '2025/26', matchIdOffset: 32 },
+};
 
 export const knownTeamAliases: Record<string, string> = {
   gorkhas: 'Kathmandu Gorkhas',
@@ -43,22 +48,25 @@ export const canonicalTeamNames = new Set<string>([
 ]);
 
 export function seasonSelectionToValues(seasonSelection: string): Set<string> {
-  const normalized = seasonSelection.trim();
-
-  if (!normalized) {
-    return new Set<string>(['2024', '2025']);
-  }
-
-  const target = normalized.toLowerCase();
-  if (target === '2024' || target === '2024/25' || target === '2024-25') {
-    return new Set(['2024', '2025']);
-  }
-  if (target === '2025' || target === '2025/26' || target === '2025-26') {
-    return new Set(['2025']);
-  }
+  const target = seasonSelection.trim().toLowerCase().replace(/-/g, '/');
   if (target === 'all') {
-    return new Set(['2024', '2025']);
+    return new Set(Object.keys(sourceSeasonMappings));
   }
+  const sourceYear = target === '2024/25' ? '2024' : target === '2025/26' ? '2025' : target;
+  if (!sourceSeasonMappings[sourceYear]) {
+    throw new Error(`Unsupported season selection: ${seasonSelection}`);
+  }
+  return new Set([sourceYear]);
+}
 
-  throw new Error(`Unsupported season selection: ${seasonSelection}`);
+export function canonicalSeasonForSourceYear(sourceYear: string): { seasonKey: string; label: string } {
+  const mapping = sourceSeasonMappings[sourceYear];
+  if (!mapping) {
+    throw new Error(`Unsupported source season year: ${sourceYear}`);
+  }
+  return { seasonKey: mapping.canonicalSeasonKey, label: mapping.canonicalSeasonKey };
+}
+
+export function logicalSourcePath(filePath: string): string {
+  return path.relative(processingRoot, filePath).split(path.sep).join('/');
 }

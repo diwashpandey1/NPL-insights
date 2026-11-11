@@ -88,7 +88,7 @@ export function splitFielders(value: string): string[] {
   }
 
   return value
-    .split(/[;,|/]/)
+    .split(/[;|]/)
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
 }

@@ -1,8 +1,86 @@
 import { supabase } from '../../config/supabase.js';
-import { canonicalizeTeamName, normalizeAlias, normalizeSeasonValue } from '../utils/normalization.js';
-import type { DeliveryRecord, IngestionIssue, MatchRecord } from '../types/index.js';
+import { canonicalTeamNames } from '../config/ingestion.config.js';
+import { canonicalizeTeamName, normalizeAlias } from '../utils/normalization.js';
+import type {
+  DeliveryRecord,
+  IngestionIssue,
+  MatchRecord,
+  PersistenceOutcome,
+  SourceFileRegistration,
+} from '../types/index.js';
 
-export class SupabaseIngestionRepository {
+export interface MatchPersistenceInput {
+  record: MatchRecord;
+  sourceFileId: string;
+  seasonId: string;
+  matchNumber: number;
+  teamAId: string | null;
+  teamBId: string | null;
+  tossWinnerTeamId: string | null;
+  winnerTeamId: string | null;
+  playerOfMatchId: string | null;
+}
+
+export interface DeliveryPersistenceInput {
+  delivery: DeliveryRecord;
+  matchId: string;
+  deliveryNumber: number;
+  sourceFileId: string;
+  battingTeamId: string | null;
+  bowlingTeamId: string | null;
+  bowlerId: string | null;
+  batterId: string | null;
+  nonStrikerId: string | null;
+  playerOutId: string | null;
+  fielders: Array<{ playerId: string | null; name: string }>;
+}
+
+export interface IngestionRepository {
+  isAvailable(): boolean;
+  createIngestionRun(input: { pipelineVersion: string; sourceSet: string }): Promise<{ id: string }>;
+  completeIngestionRun(runId: string, issueCount: number, counters: Record<string, number>, summary: Record<string, unknown>): Promise<void>;
+  failIngestionRun(runId: string, message: string, counters: Record<string, number>): Promise<void>;
+  registerSourceFile(input: {
+    ingestionRunId: string;
+    sourceSystem: string;
+    logicalPath: string;
+    contentSha256: string;
+    format: string;
+    seasonId: string | null;
+    rowCount: number;
+  }): Promise<SourceFileRegistration>;
+  persistIssues(issues: IngestionIssue[], ingestionRunId: string): Promise<void>;
+  ensureSeason(seasonKey: string, label: string): Promise<PersistenceOutcome<{ id: string }>>;
+  ensureTeam(teamName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>>;
+  resolvePlayer(playerName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; displayName: string }>>;
+  persistReviewedPlayerAlias(input: { playerId: string; playerName: string; sourceSystem: string }): Promise<PersistenceOutcome<{ id: string }>>;
+  persistMatch(input: MatchPersistenceInput): Promise<PersistenceOutcome<{ id: string }>>;
+  resolveMatchSourceKey(input: {
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+  }): Promise<PersistenceOutcome<{ id: string }>>;
+  persistMatchSourceKey(input: {
+    matchId: string;
+    sourceFileId: string;
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+    sourceRowNumber: number;
+  }): Promise<PersistenceOutcome>;
+  persistUnresolvedMatchKey(input: {
+    sourceFileId: string;
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+    sourceRowNumber: number;
+  }): Promise<void>;
+  persistDeliveryBatch(records: DeliveryPersistenceInput[]): Promise<Array<PersistenceOutcome<{ id: number }>>>;
+}
+
+type RpcResult<T> = { data: T | null; error: { message: string } | null };
+
+export class SupabaseIngestionRepository implements IngestionRepository {
   public client: typeof supabase = supabase;
 
   isAvailable(): boolean {
@@ -33,30 +111,51 @@ export class SupabaseIngestionRepository {
     if (error) {
       throw new Error(`Failed to create ingestion run: ${error.message}`);
     }
-
-    return { id: data.id as string };
+    return { id: data.id };
   }
 
-  async completeIngestionRun(runId: string, issueCount: number, counters: Record<string, number>): Promise<void> {
+  async completeIngestionRun(
+    runId: string,
+    issueCount: number,
+    counters: Record<string, number>,
+    summary: Record<string, unknown>,
+  ): Promise<void> {
     const client = this.ensureClient();
-    const status = issueCount > 0 ? 'completed_with_errors' : 'succeeded';
     const { error } = await client.from('ingestion_runs').update({
       finished_at: new Date().toISOString(),
-      status,
+      status: issueCount > 0 ? 'completed_with_errors' : 'succeeded',
       rows_read: counters.rowsRead ?? 0,
       rows_inserted: counters.rowsInserted ?? 0,
       rows_updated: counters.rowsUpdated ?? 0,
       rows_unchanged: counters.rowsUnchanged ?? 0,
       rows_rejected: counters.rowsRejected ?? 0,
-      summary: { issue_count: issueCount, ...counters },
-    }).eq('id', runId);
+      summary,
+    }).eq('id', runId).select('id').single();
 
     if (error) {
       throw new Error(`Failed to complete ingestion run: ${error.message}`);
     }
   }
 
-  async insertSourceFile(input: {
+  async failIngestionRun(runId: string, message: string, counters: Record<string, number>): Promise<void> {
+    const client = this.ensureClient();
+    const { error } = await client.from('ingestion_runs').update({
+      finished_at: new Date().toISOString(),
+      status: 'failed',
+      rows_read: counters.rowsRead ?? 0,
+      rows_inserted: counters.rowsInserted ?? 0,
+      rows_updated: counters.rowsUpdated ?? 0,
+      rows_unchanged: counters.rowsUnchanged ?? 0,
+      rows_rejected: counters.rowsRejected ?? 0,
+      summary: { failure: message },
+    }).eq('id', runId).select('id').single();
+
+    if (error) {
+      throw new Error(`Failed to mark ingestion run ${runId} as failed: ${error.message}`);
+    }
+  }
+
+  async registerSourceFile(input: {
     ingestionRunId: string;
     sourceSystem: string;
     logicalPath: string;
@@ -64,33 +163,43 @@ export class SupabaseIngestionRepository {
     format: string;
     seasonId: string | null;
     rowCount: number;
-  }): Promise<{ id: string }> {
+  }): Promise<SourceFileRegistration> {
     const client = this.ensureClient();
-    const { data, error } = await client.from('source_files').insert({
-      ingestion_run_id: input.ingestionRunId,
-      source_system: input.sourceSystem,
-      logical_path: input.logicalPath,
-      content_sha256: input.contentSha256,
-      format: input.format,
-      season_id: input.seasonId,
-      row_count: input.rowCount,
-      loaded_at: new Date().toISOString(),
-    }).select('id').single();
+    const { data, error } = await client.rpc('ingestion_register_source_file', {
+      p_ingestion_run_id: input.ingestionRunId,
+      p_source_system: input.sourceSystem,
+      p_logical_path: input.logicalPath,
+      p_content_sha256: input.contentSha256,
+      p_format: input.format,
+      p_season_id: input.seasonId,
+      p_row_count: input.rowCount,
+    }) as RpcResult<{
+      id: string;
+      outcome: SourceFileRegistration['outcome'];
+      previousRunStatus: string | null;
+      previousSummary: Record<string, unknown> | null;
+    }>;
 
     if (error) {
-      throw new Error(`Failed to write source file metadata: ${error.message}`);
+      throw new Error(`Failed to reconcile source file metadata: ${error.message}`);
     }
-
-    return { id: data.id as string };
+    if (!data?.id || !data.outcome) {
+      throw new Error('Source-file reconciliation returned an invalid result.');
+    }
+    return {
+      id: data.id,
+      outcome: data.outcome,
+      previousRunStatus: data.previousRunStatus,
+      previousSummary: data.previousSummary,
+    };
   }
 
   async persistIssues(issues: IngestionIssue[], ingestionRunId: string): Promise<void> {
-    if (!issues.length) {
-      return;
-    }
+    if (!issues.length) return;
     const client = this.ensureClient();
     const rows = issues.map((issue) => ({
       ingestion_run_id: ingestionRunId,
+      source_file_id: issue.sourceFileId ?? null,
       source_row_number: issue.rowNumber ?? null,
       entity_name: issue.entityName ?? null,
       source_key: issue.code ?? null,
@@ -99,278 +208,341 @@ export class SupabaseIngestionRepository {
       column_name: issue.columnName ?? null,
       message: issue.message,
     }));
-
-    const { error } = await client.from('ingestion_issues').insert(rows);
-    if (error) {
-      throw new Error(`Failed to persist ingestion issues: ${error.message}`);
+    const { data, error } = await client.from('ingestion_issues').insert(rows).select('id');
+    if (error) throw new Error(`Failed to persist ingestion issues: ${error.message}`);
+    if (!data || data.length !== rows.length) {
+      throw new Error(`Persisting ingestion issues returned ${data?.length ?? 0} rows; expected ${rows.length}.`);
     }
   }
 
-  async ensureSeason(seasonKey: string, label: string): Promise<{ id: string }> {
+  async ensureSeason(seasonKey: string, label: string): Promise<PersistenceOutcome<{ id: string }>> {
     const client = this.ensureClient();
-    const normalized = normalizeSeasonValue(seasonKey) || seasonKey;
-    const { data: existing, error: existingError } = await client.from('seasons').select('id').eq('season_key', normalized).maybeSingle();
-    if (existingError && existingError.code !== 'PGRST116') {
-      throw new Error(`Failed to fetch season: ${existingError.message}`);
-    }
-    if (existing) return { id: existing.id as string };
-
-    const { data, error } = await client.from('seasons').insert({
-      season_key: normalized,
-      label,
-      coverage_status: 'partial',
-      source_season_year: Number(normalized.slice(0, 4)) || null,
-    }).select('id').single();
-
-    if (error) {
-      throw new Error(`Failed to create season: ${error.message}`);
-    }
-
-    return { id: data.id as string };
+    const { data, error } = await client.rpc('ingestion_ensure_season', {
+      p_season_key: seasonKey,
+      p_label: label,
+      p_source_season_year: Number(seasonKey.slice(0, 4)),
+    }) as RpcResult<{ id: string; outcome: PersistenceOutcome['outcome']; reason?: string }>;
+    if (error) throw new Error(`Failed to ensure season ${seasonKey}: ${error.message}`);
+    if (!data?.id || !data.outcome) throw new Error(`Season ensure returned an invalid result for ${seasonKey}.`);
+    return { outcome: data.outcome, data: { id: data.id }, reason: data.reason };
   }
 
-  async ensureTeam(teamName: string, sourceSystem: string): Promise<{ id: string; canonicalName: string }> {
+  async ensureTeam(teamName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>> {
+    const canonicalName = canonicalizeTeamName(teamName);
+    if (!canonicalName || !canonicalTeamNames.has(canonicalName)) {
+      return { outcome: 'rejected', reason: `Unrecognized canonical team identity: ${teamName}` };
+    }
     const client = this.ensureClient();
-    const canonicalName = canonicalizeTeamName(teamName) || teamName;
-    const alias = normalizeAlias(teamName);
-
-    const { data: aliasRow, error: aliasError } = await client
-      .from('team_aliases')
-      .select('team_id, teams (canonical_name)')
-      .eq('source_system', sourceSystem)
-      .eq('alias_normalized', alias)
-      .maybeSingle() as { data: { team_id?: string; teams?: { canonical_name?: string } | null } | null; error?: { code?: string; message: string } | null };
-
-    if (aliasError && aliasError.code !== 'PGRST116') {
-      throw new Error(`Failed to resolve team alias: ${aliasError.message}`);
-    }
-    if (aliasRow) {
-      return { id: aliasRow.team_id as string, canonicalName: aliasRow.teams?.canonical_name ?? canonicalName };
-    }
-
-    const { data: teamData, error: teamError } = await client.from('teams').upsert({
-      team_key: `team-${canonicalName.trim().toLowerCase().replace(/\s+/g, '-')}`,
-      canonical_name: canonicalName,
-      active: true,
-    }, { onConflict: 'team_key' }).select('id, canonical_name').single();
-
-    if (teamError) {
-      throw new Error(`Failed to upsert team: ${teamError.message}`);
-    }
-
-    await client.from('team_aliases').upsert({
-      team_id: teamData.id,
-      source_system: sourceSystem,
-      alias: teamName,
-      alias_normalized: alias,
-    }, { onConflict: 'source_system, alias_normalized' });
-
-    return { id: teamData.id as string, canonicalName: teamData.canonical_name as string };
+    const { data, error } = await client.rpc('ingestion_ensure_team_alias', {
+      p_team_key: `team-${canonicalName.trim().toLowerCase().replace(/\s+/g, '-')}`,
+      p_canonical_name: canonicalName,
+      p_source_system: sourceSystem,
+      p_alias: teamName.trim(),
+      p_alias_normalized: normalizeAlias(teamName),
+    }) as RpcResult<{ id: string; canonical_name: string; outcome: PersistenceOutcome['outcome']; reason?: string }>;
+    if (error) throw new Error(`Failed to resolve team alias ${teamName}: ${error.message}`);
+    if (!data?.id || !data.outcome) throw new Error(`Team alias resolution returned an invalid result for ${teamName}.`);
+    return {
+      outcome: data.outcome,
+      data: { id: data.id, canonicalName: data.canonical_name },
+      reason: data.reason,
+    };
   }
 
-  async ensurePlayer(playerName: string, sourceSystem: string): Promise<{ id: string | null; displayName: string }> {
-    const client = this.ensureClient();
+  async resolvePlayer(playerName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; displayName: string }>> {
     const alias = normalizeAlias(playerName);
-    if (!playerName || !alias) {
-      return { id: null, displayName: playerName };
-    }
+    if (!alias) return { outcome: 'rejected', reason: 'Player name is empty.' };
 
-    const { data: aliasRow, error: aliasError } = await client
-      .from('player_aliases')
+    const client = this.ensureClient();
+    const { data, error } = await client.from('player_aliases')
       .select('player_id, players (display_name)')
       .eq('source_system', sourceSystem)
       .eq('alias_normalized', alias)
-      .maybeSingle() as { data: { player_id?: string; players?: { display_name?: string } | null } | null; error?: { code?: string; message: string } | null };
-
-    if (aliasError && aliasError.code !== 'PGRST116') {
-      throw new Error(`Failed to resolve player alias: ${aliasError.message}`);
+      .maybeSingle() as {
+        data: { player_id: string; players: { display_name: string } | null } | null;
+        error: { message: string } | null;
+      };
+    if (error) throw new Error(`Failed to resolve reviewed player alias ${playerName}: ${error.message}`);
+    if (!data?.player_id) {
+      return { outcome: 'rejected', reason: `No reviewed player alias exists for ${playerName}.` };
     }
-    if (aliasRow) {
-      return { id: aliasRow.player_id as string, displayName: aliasRow.players?.display_name ?? playerName };
+    return {
+      outcome: 'unchanged',
+      data: { id: data.player_id, displayName: data.players?.display_name ?? playerName },
+    };
+  }
+
+  async persistReviewedPlayerAlias(input: {
+    playerId: string;
+    playerName: string;
+    sourceSystem: string;
+  }): Promise<PersistenceOutcome<{ id: string }>> {
+    const client = this.ensureClient();
+    const alias = normalizeAlias(input.playerName);
+    const { data: existing, error: lookupError } = await client.from('player_aliases')
+      .select('id, player_id')
+      .eq('source_system', input.sourceSystem)
+      .eq('alias_normalized', alias)
+      .maybeSingle();
+    if (lookupError) throw new Error(`Failed to inspect player alias ${input.playerName}: ${lookupError.message}`);
+    if (existing) {
+      if (existing.player_id !== input.playerId) {
+        return { outcome: 'rejected', reason: `Player alias ${input.playerName} is already assigned to a different player.` };
+      }
+      return { outcome: 'unchanged', data: { id: existing.id } };
     }
 
-    const { data: newPlayer, error: playerError } = await client.from('players').insert({ display_name: playerName }).select('id').single();
-    if (playerError) {
-      throw new Error(`Failed to create player: ${playerError.message}`);
-    }
-
-    await client.from('player_aliases').upsert({
-      player_id: newPlayer.id,
-      source_system: sourceSystem,
-      alias: playerName,
+    const { data, error } = await client.from('player_aliases').insert({
+      player_id: input.playerId,
+      source_system: input.sourceSystem,
+      alias: input.playerName.trim(),
       alias_normalized: alias,
-    }, { onConflict: 'source_system, alias_normalized' });
-
-    return { id: newPlayer.id as string, displayName: playerName };
-  }
-
-  async ensureTeamAffiliation(seasonId: string, teamId: string, playerId: string, sourceFileId: string | null): Promise<void> {
-    const client = this.ensureClient();
-    const { error } = await client.from('player_season_teams').upsert({
-      season_id: seasonId,
-      team_id: teamId,
-      player_id: playerId,
-      source_file_id: sourceFileId,
-    }, { onConflict: 'season_id, team_id, player_id' });
-    if (error) {
-      throw new Error(`Failed to persist player-season-team affiliation: ${error.message}`);
-    }
-  }
-
-  async ensureMatch(match: MatchRecord, ingestionRunId: string, sourceFileId: string | null): Promise<{ id: string }> {
-    const client = this.ensureClient();
-    const season = await this.ensureSeason(match.season, match.season || 'Unknown season');
-    const { data: existing, error: existingError } = await client.from('match_source_keys').select('match_id').eq('source_file_id', sourceFileId ?? '').eq('external_match_key', String(match.id)).maybeSingle();
-    if (existingError && existingError.code !== 'PGRST116') {
-      throw new Error(`Failed to look up source key: ${existingError.message}`);
-    }
-    if (existing?.match_id) {
-      return { id: existing.match_id as string };
-    }
-
-    const teamA = await this.ensureTeam(match.team_1, 'npl-master');
-    const teamB = await this.ensureTeam(match.team_2, 'npl-master');
-    const teamWinner = match.winner ? await this.ensureTeam(match.winner, 'npl-master') : null;
-
-    const { data: matchData, error: matchError } = await client.from('matches').insert({
-      season_id: season.id,
-      match_number: Number(match.id.split('_').at(-1) ?? match.id) || null,
-      match_date: match.date || null,
-      venue_name: match.venue || null,
-      city: match.city || null,
-      stage: match.stage || null,
-      team_a_id: teamA.id,
-      team_b_id: teamB.id,
-      toss_winner_team_id: match.toss_winner ? (await this.ensureTeam(match.toss_winner, 'npl-master')).id : null,
-      toss_decision: match.toss_decision || null,
-      winner_team_id: teamWinner?.id ?? null,
-      result_text: match.result || null,
-      win_by_runs: match.win_by_runs,
-      win_by_wickets: match.win_by_wickets,
-      dls_applied: match.dls_applied,
-      super_over: match.super_over,
-      player_of_match_id: match.player_of_the_match ? (await this.ensurePlayer(match.player_of_the_match, 'npl-master')).id : null,
-      match_status: 'completed',
     }).select('id').single();
+    if (error) throw new Error(`Failed to persist reviewed player alias ${input.playerName}: ${error.message}`);
+    return { outcome: 'inserted', data: { id: data.id } };
+  }
 
-    if (matchError) {
-      throw new Error(`Failed to create match: ${matchError.message}`);
+  async persistMatch(input: MatchPersistenceInput): Promise<PersistenceOutcome<{ id: string }>> {
+    const client = this.ensureClient();
+    const { record } = input;
+    const { data, error } = await client.rpc('ingestion_persist_match', {
+      p_match: {
+        season_id: input.seasonId,
+        match_number: input.matchNumber,
+        match_date: record.date || null,
+        start_time: null,
+        venue_name: record.venue || null,
+        city: record.city || null,
+        stage: record.stage || null,
+        team_a_id: input.teamAId,
+        team_b_id: input.teamBId,
+        toss_winner_team_id: input.tossWinnerTeamId,
+        toss_decision: record.toss_decision || null,
+        winner_team_id: input.winnerTeamId,
+        result_text: record.result || null,
+        win_by_runs: record.win_by_runs,
+        win_by_wickets: record.win_by_wickets,
+        dls_applied: record.dls_applied,
+        super_over: record.super_over,
+        player_of_match_id: input.playerOfMatchId,
+        match_status: 'completed',
+      },
+      p_source_key: {
+        source_file_id: input.sourceFileId,
+        source_system: 'npl-match-feed',
+        source_season_key: record.season,
+        external_match_key: record.id,
+        disambiguator: '',
+        source_row_number: record.sourceRowNumber,
+      },
+    }) as RpcResult<{ id: string; outcome: PersistenceOutcome['outcome'] }>;
+    if (error) throw new Error(`Failed to persist match ${record.id}: ${error.message}`);
+    if (!data?.id || !data.outcome) throw new Error(`Match persistence returned an invalid result for ${record.id}.`);
+    return { outcome: data.outcome, data: { id: data.id } };
+  }
+
+  async resolveMatchSourceKey(input: {
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+  }): Promise<PersistenceOutcome<{ id: string }>> {
+    const client = this.ensureClient();
+    const { data, error } = await client.from('match_source_keys')
+      .select('match_id, resolution_status')
+      .eq('source_system', input.sourceSystem)
+      .eq('source_season_key', input.sourceSeasonKey)
+      .eq('external_match_key', input.externalMatchKey)
+      .eq('disambiguator', '')
+      .maybeSingle();
+    if (error) throw new Error(`Failed to resolve match source key ${input.externalMatchKey}: ${error.message}`);
+    if (data?.resolution_status !== 'resolved' || !data.match_id) {
+      return { outcome: 'rejected', reason: `Match source key ${input.externalMatchKey} has no resolved canonical match.` };
+    }
+    return { outcome: 'unchanged', data: { id: data.match_id } };
+  }
+
+  async persistMatchSourceKey(input: {
+    matchId: string;
+    sourceFileId: string;
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+    sourceRowNumber: number;
+  }): Promise<PersistenceOutcome> {
+    const client = this.ensureClient();
+    const { data: existing, error: lookupError } = await client.from('match_source_keys')
+      .select('id, match_id, source_file_id, source_row_number')
+      .eq('source_system', input.sourceSystem)
+      .eq('source_season_key', input.sourceSeasonKey)
+      .eq('external_match_key', input.externalMatchKey)
+      .eq('disambiguator', '')
+      .maybeSingle();
+    if (lookupError) throw new Error(`Failed to resolve source match key ${input.externalMatchKey}: ${lookupError.message}`);
+    if (existing?.match_id && existing.match_id !== input.matchId) {
+      return { outcome: 'rejected', reason: `Source match key ${input.externalMatchKey} already resolves to a different match.` };
+    }
+    if (!existing?.match_id && existing) {
+      const { error } = await client.from('match_source_keys').update({
+        match_id: input.matchId,
+        source_file_id: input.sourceFileId,
+        source_row_number: input.sourceRowNumber,
+        resolution_status: 'resolved',
+      }).eq('id', existing.id).select('id').single();
+      if (error) throw new Error(`Failed to resolve source match key ${input.externalMatchKey}: ${error.message}`);
+      return { outcome: 'updated' };
+    }
+    if (existing?.match_id === input.matchId) {
+      if (existing.source_file_id === input.sourceFileId
+        && Number(existing.source_row_number) === input.sourceRowNumber) {
+        return { outcome: 'unchanged' };
+      }
+      const { error } = await client.from('match_source_keys').update({
+        source_file_id: input.sourceFileId,
+        source_row_number: input.sourceRowNumber,
+        resolution_status: 'resolved',
+      }).eq('id', existing.id).select('id').single();
+      if (error) throw new Error(`Failed to update source match key ${input.externalMatchKey}: ${error.message}`);
+      return { outcome: 'updated' };
     }
 
-    await client.from('match_source_keys').upsert({
-      match_id: matchData.id,
-      source_file_id: sourceFileId,
-      source_system: 'npl-master',
-      source_season_key: match.season,
-      external_match_key: String(match.id),
+    const { error } = await client.from('match_source_keys').insert({
+      match_id: input.matchId,
+      source_file_id: input.sourceFileId,
+      source_system: input.sourceSystem,
+      source_season_key: input.sourceSeasonKey,
+      external_match_key: input.externalMatchKey,
       disambiguator: '',
-      source_row_number: match.sourceRowNumber,
+      source_row_number: input.sourceRowNumber,
       resolution_status: 'resolved',
-    }, { onConflict: 'source_file_id, source_row_number' });
-
-    return { id: matchData.id as string };
+    });
+    if (error) throw new Error(`Failed to persist source match key ${input.externalMatchKey}: ${error.message}`);
+    return { outcome: 'inserted' };
   }
 
-  async ensureDelivery(delivery: DeliveryRecord, ingestionRunId: string, sourceFileId: string | null): Promise<{ id: number }> {
+  async persistUnresolvedMatchKey(input: {
+    sourceFileId: string;
+    sourceSystem: string;
+    sourceSeasonKey: string;
+    externalMatchKey: string;
+    sourceRowNumber: number;
+  }): Promise<void> {
     const client = this.ensureClient();
-    const season = await this.ensureSeason(delivery.season, delivery.season || 'Unknown season');
-    const matchId = await this.ensureMatchSourceReference(delivery.match_id, sourceFileId);
-    const batterId = delivery.batsman ? (await this.ensurePlayer(delivery.batsman, 'npl-master')).id : null;
-    const bowlerId = delivery.bowler ? (await this.ensurePlayer(delivery.bowler, 'npl-master')).id : null;
-    const strikerId = delivery.non_striker ? (await this.ensurePlayer(delivery.non_striker, 'npl-master')).id : null;
-    const inningsNo = Number(delivery.inning) || 1;
-
-    const matchInningsId = await client.from('match_innings').upsert({
-      match_id: matchId,
-      innings_no: inningsNo,
-      batting_team_id: (await this.ensureTeam(delivery.batting_team, 'npl-master')).id,
-      bowling_team_id: (await this.ensureTeam(delivery.bowling_team, 'npl-master')).id,
-      source_file_id: sourceFileId,
-    }, { onConflict: 'match_id, innings_no' }).select('match_id').single();
-    if (matchInningsId.error) {
-      throw new Error(`Failed to upsert innings: ${matchInningsId.error.message}`);
+    const { data: rowExisting, error: rowLookupError } = await client.from('match_source_keys')
+      .select('id, match_id')
+      .eq('source_file_id', input.sourceFileId)
+      .eq('source_row_number', input.sourceRowNumber)
+      .maybeSingle();
+    if (rowLookupError) throw new Error(`Failed to inspect unresolved source key ${input.externalMatchKey}: ${rowLookupError.message}`);
+    if (rowExisting?.match_id) {
+      throw new Error(`Source key ${input.externalMatchKey} is already resolved and cannot be overwritten as ambiguous.`);
     }
 
-    const { data: deliveryData, error: deliveryError } = await client.from('deliveries').insert({
-      match_id: matchId,
-      innings_no: inningsNo,
-      delivery_no: delivery.sourceRowNumber,
-      source_file_id: sourceFileId,
-      source_row_number: delivery.sourceRowNumber,
-      over_number: Number(delivery.ball_over.split('.')[0]) || null,
-      ball_in_over: Number(delivery.ball_over.split('.').at(-1)) || null,
-      source_ball_label: delivery.ball_over,
-      ball_result: delivery.ball_result || null,
-      shot_direction: delivery.shot_direction || null,
-      bowler_id: bowlerId,
-      batter_id: batterId,
-      non_striker_id: strikerId,
-      bowler_name_raw: delivery.bowler || null,
-      batter_name_raw: delivery.batsman || null,
-      non_striker_name_raw: delivery.non_striker || null,
-      batter_runs: delivery.batsman_runs,
-      wide_runs: delivery.wide_runs,
-      no_ball_runs: delivery.noball_runs,
-      bye_runs: delivery.bye_runs,
-      leg_bye_runs: delivery.legbye_runs,
-      extra_runs: delivery.extra_runs,
-      total_runs: delivery.total_runs,
-    }).select('id').single();
+    const payload = {
+      match_id: null,
+      source_file_id: input.sourceFileId,
+      source_system: input.sourceSystem,
+      source_season_key: input.sourceSeasonKey,
+      external_match_key: input.externalMatchKey,
+      disambiguator: '',
+      source_row_number: input.sourceRowNumber,
+      resolution_status: 'ambiguous',
+    };
 
-    if (deliveryError) {
-      throw new Error(`Failed to create delivery: ${deliveryError.message}`);
-    }
-
-    if (delivery.player_out || delivery.dismissal_kind) {
-      const { data: dismissalData, error: dismissalError } = await client.from('dismissals').insert({
-        delivery_id: deliveryData.id,
-        dismissal_no: 1,
-        player_out_id: delivery.player_out ? (await this.ensurePlayer(delivery.player_out, 'npl-master')).id : null,
-        player_out_name_raw: delivery.player_out || null,
-        dismissal_kind: delivery.dismissal_kind || 'unknown',
-        source_file_id: sourceFileId,
-      }).select('id').single();
-      if (dismissalError) {
-        throw new Error(`Failed to create dismissal: ${dismissalError.message}`);
+    let existing = rowExisting;
+    if (!existing) {
+      const { data, error: identityLookupError } = await client.from('match_source_keys')
+        .select('id, match_id')
+        .eq('source_system', input.sourceSystem)
+        .eq('source_season_key', input.sourceSeasonKey)
+        .eq('external_match_key', input.externalMatchKey)
+        .eq('disambiguator', '')
+        .maybeSingle();
+      if (identityLookupError) {
+        throw new Error(`Failed to inspect source identity ${input.externalMatchKey}: ${identityLookupError.message}`);
       }
-
-      const fielderNames = delivery.fielders ? delivery.fielders.split(/[;,|/]/).map((name) => name.trim()).filter(Boolean) : [];
-      for (let index = 0; index < fielderNames.length; index += 1) {
-        const fielderName = fielderNames[index];
-        const fielderId = fielderName ? (await this.ensurePlayer(fielderName, 'npl-master')).id : null;
-        const { error: fielderError } = await client.from('dismissal_fielders').insert({
-          dismissal_id: dismissalData.id,
-          fielder_no: index + 1,
-          player_id: fielderId,
-          fielder_name_raw: fielderName,
-        });
-        if (fielderError) {
-          throw new Error(`Failed to create dismissal fielder: ${fielderError.message}`);
-        }
-      }
+      if (data?.match_id) return;
+      existing = data;
     }
 
-    return { id: deliveryData.id as number };
+    const query = existing
+      ? client.from('match_source_keys').update(payload).eq('id', existing.id)
+      : client.from('match_source_keys').insert(payload);
+    const { error } = await query.select('id').single();
+    if (error) throw new Error(`Failed to persist unresolved source key ${input.externalMatchKey}: ${error.message}`);
   }
 
-  async ensureMatchSourceReference(externalMatchKey: string, sourceFileId: string | null): Promise<string> {
+  async persistDeliveryBatch(records: DeliveryPersistenceInput[]): Promise<Array<PersistenceOutcome<{ id: number }>>> {
+    if (!records.length) return [];
     const client = this.ensureClient();
-    const { data, error } = await client.from('match_source_keys').select('match_id').eq('source_file_id', sourceFileId ?? '').eq('external_match_key', externalMatchKey).maybeSingle();
-    if (error && error.code !== 'PGRST116') {
-      throw new Error(`Failed to resolve match source key: ${error.message}`);
-    }
-    if (data?.match_id) {
-      return data.match_id as string;
-    }
+    const rpcRecords = records.map((input) => {
+      const { delivery } = input;
+      const dismissalRecords = delivery.player_out || delivery.dismissal_kind
+        ? [{
+            dismissal_no: 1,
+            player_out_id: input.playerOutId,
+            player_out_name_raw: delivery.player_out || null,
+            dismissal_kind: delivery.dismissal_kind || 'unknown',
+            source_file_id: input.sourceFileId,
+            fielders: input.fielders.map((fielder, index) => ({
+              fielder_no: index + 1,
+              player_id: fielder.playerId,
+              fielder_name_raw: fielder.name,
+            })),
+          }]
+        : [];
+      return {
+        delivery: {
+          match_id: input.matchId,
+          innings_no: delivery.inning,
+          delivery_no: input.deliveryNumber,
+          source_file_id: input.sourceFileId,
+          source_row_number: delivery.sourceRowNumber,
+          over_number: parseNumberPart(delivery.ball_over, 0),
+          ball_in_over: parseNumberPart(delivery.ball_over, -1),
+          source_ball_label: delivery.ball_over || null,
+          ball_result: delivery.ball_result || null,
+          shot_direction: delivery.shot_direction || null,
+          bowler_id: input.bowlerId,
+          batter_id: input.batterId,
+          non_striker_id: input.nonStrikerId,
+          bowler_name_raw: delivery.bowler || null,
+          batter_name_raw: delivery.batsman || null,
+          non_striker_name_raw: delivery.non_striker || null,
+          batter_runs: delivery.batsman_runs,
+          wide_runs: delivery.wide_runs,
+          no_ball_runs: delivery.noball_runs,
+          bye_runs: delivery.bye_runs,
+          leg_bye_runs: delivery.legbye_runs,
+          extra_runs: delivery.extra_runs,
+          total_runs: delivery.total_runs,
+        },
+        innings: {
+          batting_team_id: input.battingTeamId,
+          bowling_team_id: input.bowlingTeamId,
+          source_file_id: input.sourceFileId,
+        },
+        dismissals: dismissalRecords,
+      };
+    });
 
-    const fallback = await client.from('matches').select('id').eq('match_number', Number(externalMatchKey.split('_').at(-1) ?? 0)).limit(1);
-    if (fallback.error) {
-      throw new Error(`Failed to resolve match fallback: ${fallback.error.message}`);
+    const { data, error } = await client.rpc('ingestion_persist_delivery_batch', { p_records: rpcRecords }) as RpcResult<
+      Array<{ id: number; outcome: PersistenceOutcome['outcome'] }>
+    >;
+    if (error) throw new Error(`Failed to atomically persist delivery batch: ${error.message}`);
+    if (!Array.isArray(data) || data.length !== records.length) {
+      throw new Error('Delivery batch persistence returned an incomplete result.');
     }
-    if (fallback.data && fallback.data.length > 0 && fallback.data[0]?.id) {
-      return fallback.data[0].id as string;
-    }
-
-    throw new Error(`No match was created for source key: ${externalMatchKey}`);
+    return data.map((result) => {
+      if (typeof result.id !== 'number' || !result.outcome) {
+        throw new Error('Delivery batch persistence returned an invalid record outcome.');
+      }
+      return { outcome: result.outcome, data: { id: result.id } };
+    });
   }
+}
+
+function parseNumberPart(label: string, index: number): number | null {
+  const parts = label.split('.');
+  const value = Number(parts[index < 0 ? parts.length + index : index]);
+  return Number.isInteger(value) && value >= 0 ? value : null;
 }

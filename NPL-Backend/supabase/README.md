@@ -7,9 +7,9 @@ bowling, fielding, innings, team, and head-to-head statistics remain derived
 queries/views; this foundation does not import cricket data or create sample
 records.
 
-The backend's existing Supabase client remains server-side and optional. No
-repositories, API routes, ingestion code, or new Node dependencies are part of
-this database foundation.
+The backend's Supabase client remains server-side and optional. The offline
+ingestion worker uses that existing client and canonical schema; it does not
+add API routes or modify source datasets.
 
 ## Migration order
 
@@ -26,6 +26,10 @@ Apply the timestamped files in filename order:
 5. `migrations/20261111112553_create_standings.sql` — standings snapshots.
 6. `migrations/20261111112558_add_analytics_indexes_and_rls.sql` — workload
    indexes, RLS, and role grants.
+7. `migrations/20261111142559_ingestion_atomic_persistence.sql` — service-role
+   RPCs for season/team-alias ensure, source-file hash reconciliation, atomic
+   match/source-key persistence, and atomic innings/delivery/dismissal/fielder
+   batches.
 
 Migrations are tracked by Supabase's migration history. Do not edit an
 already-applied migration; create a new migration for subsequent schema
@@ -63,8 +67,10 @@ not use it if the local Supabase database contains data you need to keep.
 Seeding is disabled; there is no `seed.sql` and no fabricated cricket data.
 Use `supabase status` to view local service URLs and connection information.
 
-The initial migrations have not yet been applied in this workspace: Docker was
-not available during implementation. No hosted project was linked or modified.
+The migrations, including the ingestion RPCs, have not been applied or
+executed in this workspace: Docker was not available during implementation.
+No hosted project was linked or modified. Backend unit tests use mocks and do
+not verify SQL compilation, grants, or behavior against PostgreSQL.
 Local `auto_expose_new_tables` is disabled in `config.toml`, so future local
 tables require explicit grants. This local setting does not change a hosted
 project's Data API defaults; review those separately before deployment.
@@ -205,6 +211,14 @@ deployed.
 Do not add a permissive policy just to make local tests pass. Any future direct
 Data API access needs a separate review of grants, RLS policies, and exposed
 objects. The Express backend is the intended access boundary for now.
+
+The ingestion RPCs use `SECURITY INVOKER`, a fixed `search_path`, and explicit
+execute grants only to `service_role`; they do not expose elevated SQL to
+`anon` or `authenticated`. Atomicity of match/source-key and delivery/innings/
+dismissal/fielder writes is provided by each RPC call's single PostgreSQL
+statement transaction. Team-alias and season ensure operations are also
+single-call RPCs. The delivery-source crosswalk is a separate REST statement,
+but dependent delivery batches are not submitted if that mapping fails.
 
 ## Future migration changes
 
