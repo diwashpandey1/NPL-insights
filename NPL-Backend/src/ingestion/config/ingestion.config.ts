@@ -14,6 +14,8 @@ export const defaultDataPaths = {
   rawCricsheetDirectory: path.join(processingRoot, 'data', 'raw', 'cricsheet', 'npl_json'),
 };
 
+export const supportedSeasonSelections = ['2024', '2025', '2024/25', '2025/26'];
+
 export const knownTeamAliases: Record<string, string> = {
   gorkhas: 'Kathmandu Gorkhas',
   gurkhas: 'Kathmandu Gorkhas',
@@ -40,4 +42,23 @@ export const canonicalTeamNames = new Set<string>([
   'Pokhara Avengers',
 ]);
 
-export const supportedSeasons = ['2024/25', '2025/26'];
+export function seasonSelectionToValues(seasonSelection: string): Set<string> {
+  const normalized = seasonSelection.trim();
+
+  if (!normalized) {
+    return new Set<string>(['2024', '2025']);
+  }
+
+  const target = normalized.toLowerCase();
+  if (target === '2024' || target === '2024/25' || target === '2024-25') {
+    return new Set(['2024', '2025']);
+  }
+  if (target === '2025' || target === '2025/26' || target === '2025-26') {
+    return new Set(['2025']);
+  }
+  if (target === 'all') {
+    return new Set(['2024', '2025']);
+  }
+
+  throw new Error(`Unsupported season selection: ${seasonSelection}`);
+}

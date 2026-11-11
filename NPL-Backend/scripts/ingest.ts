@@ -22,6 +22,14 @@ async function saveReport(name: string, payload: unknown): Promise<void> {
   await fs.writeFile(path.join(outputDir, `${name}.json`), JSON.stringify(payload, null, 2), 'utf8');
 }
 
+async function parseSeasonArg(args: string[]): Promise<string> {
+  const value = args[0] ?? '2024/25';
+  if (value.startsWith('--')) {
+    return args[1] ?? '2024/25';
+  }
+  return value;
+}
+
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
 
@@ -32,20 +40,22 @@ async function main(): Promise<void> {
       break;
     }
     case 'validate': {
-      const report = await validateSourceData(false);
+      const season = await parseSeasonArg(args);
+      const report = await validateSourceData(season, { dryRun: true });
       console.log(JSON.stringify(report, null, 2));
       await saveReport('ingestion-validation', report);
       break;
     }
     case 'dry-run': {
-      const report = await dryRunIngestion();
+      const season = await parseSeasonArg(args);
+      const report = await dryRunIngestion(season);
       console.log(JSON.stringify(report, null, 2));
       await saveReport('ingestion-dry-run', report);
       break;
     }
     case 'season': {
-      const season = args[0] ?? '2024/25';
-      const report = await runSeasonIngestion(season);
+      const season = await parseSeasonArg(args);
+      const report = await runSeasonIngestion(season, { dryRun: false });
       console.log(JSON.stringify(report, null, 2));
       await saveReport(`ingestion-${season.replace(/\//g, '-')}`, report);
       break;
@@ -56,16 +66,9 @@ async function main(): Promise<void> {
       await saveReport('ingestion-all', report);
       break;
     }
-    case 'reprocess': {
-      const file = args[0] ?? path.join(process.cwd(), '..', 'NPL - Stats Processing', 'data', 'processed', 'combined', 'merged_npl_2024_2025.csv');
-      const report = await validateSourceData(true);
-      const hash = await fs.readFile(file, 'utf8');
-      console.log(JSON.stringify({ file, sha256: (await import('node:crypto')).createHash('sha256').update(hash).digest('hex'), report }, null, 2));
-      await saveReport('ingestion-reprocess', { file, sha256: (await import('node:crypto')).createHash('sha256').update(hash).digest('hex'), report });
-      break;
-    }
     case 'report': {
-      const report = await generateIngestionReport();
+      const season = await parseSeasonArg(args);
+      const report = await generateIngestionReport(season);
       console.log(JSON.stringify(report, null, 2));
       await saveReport('ingestion-report', report);
       break;
@@ -73,7 +76,7 @@ async function main(): Promise<void> {
     case 'help':
     case undefined:
     default: {
-      console.log('Usage: npm run ingest:inspect | ingest:validate | ingest:dry-run | ingest:season -- <season> | ingest:all | ingest:reprocess -- <source-file> | ingest:report');
+      console.log('Usage: npm run ingest:inspect | npm run ingest:validate -- 2024/25 | npm run ingest:dry-run -- 2024/25 | npm run ingest:season -- 2024/25 | npm run ingest:all | npm run ingest:report -- 2024/25');
       break;
     }
   }

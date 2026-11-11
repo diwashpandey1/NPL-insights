@@ -4,30 +4,49 @@ import fs from 'node:fs/promises';
 import { knownTeamAliases } from '../config/ingestion.config.js';
 
 export function normalizeText(value: unknown): string {
-  if (typeof value !== 'string') {
-    return '';
-  }
-
-  return value.trim();
+  return typeof value === 'string' ? value.trim() : '';
 }
 
 export function normalizeAlias(value: unknown): string {
   return normalizeText(value).toLowerCase().replace(/\s+/g, ' ');
 }
 
-export function canonicalizeTeamName(value: unknown): string {
-  const normalized = normalizeAlias(value);
-
-  if (!normalized) {
+export function normalizeSeasonValue(value: unknown): string {
+  const text = normalizeText(value).replace(/[^0-9/\-]/g, '');
+  if (!text) {
     return '';
   }
 
-  const directMatch = knownTeamAliases[normalized];
-  if (directMatch) {
-    return directMatch;
+  if (text === '2024/25' || text === '2024-25' || text === '202425') {
+    return '2024/25';
+  }
+  if (text === '2025/26' || text === '2025-26' || text === '202526') {
+    return '2025/26';
+  }
+  if (text === '2024') {
+    return '2024';
+  }
+  if (text === '2025') {
+    return '2025';
   }
 
-  return normalizeText(value);
+  return text;
+}
+
+export function canonicalizeTeamName(value: unknown): string {
+  const raw = normalizeText(value);
+  if (!raw) {
+    return '';
+  }
+
+  const normalized = normalizeAlias(raw);
+  const directMatch = knownTeamAliases[normalized];
+  return directMatch ?? raw;
+}
+
+export function canonicalizePlayerName(value: unknown): string {
+  const raw = normalizeText(value);
+  return raw;
 }
 
 export function parseInteger(value: unknown): number | null {
@@ -61,4 +80,15 @@ export async function computeFileSha256(filePath: string): Promise<string> {
 
 export function formatIssueCode(prefix: string, suffix: string): string {
   return `${prefix}:${suffix}`;
+}
+
+export function splitFielders(value: string): string[] {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(/[;,|/]/)
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
 }

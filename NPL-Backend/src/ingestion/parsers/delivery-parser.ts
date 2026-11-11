@@ -1,43 +1,49 @@
 import { defaultDataPaths } from '../config/ingestion.config.js';
 import { readCsvFile } from '../readers/source-reader.js';
-import { canonicalizeTeamName, parseInteger } from '../utils/normalization.js';
-import type { DeliveryRecord, MatchRecord, SourceRowRecord } from '../types/index.js';
+import { canonicalizeTeamName, normalizeSeasonValue, parseBoolean, parseInteger } from '../utils/normalization.js';
+import type { DeliveryRecord, MatchRecord } from '../types/index.js';
 
 export async function parseBallByBallCsv(filePath = defaultDataPaths.ballByBallCsv): Promise<{ path: string; kind: 'ball-by-ball'; seasonKey: string; rows: Record<string, string>[] }> {
   const rows = await readCsvFile<Record<string, string>>(filePath);
-
-  return {
-    path: filePath,
-    kind: 'ball-by-ball',
-    seasonKey: '2024/25',
-    rows,
-  };
+  return { path: filePath, kind: 'ball-by-ball', seasonKey: '2024/25', rows };
 }
 
 export async function parseMatchCsv(filePath = defaultDataPaths.matchCsv): Promise<{ path: string; kind: 'match'; seasonKey: string; rows: Record<string, string>[] }> {
   const rows = await readCsvFile<Record<string, string>>(filePath);
+  return { path: filePath, kind: 'match', seasonKey: '2024/25', rows };
+}
 
-  return {
-    path: filePath,
-    kind: 'match',
-    seasonKey: '2024/25',
-    rows,
-  };
+export function filterSourceRowsBySeason<T extends { season: string }>(rows: T[], seasonSelection: string): T[] {
+  const normalizedSelection = seasonSelection.trim().toLowerCase();
+  const selectedSeasons = new Set<string>();
+
+  if (!normalizedSelection || normalizedSelection === 'all') {
+    selectedSeasons.add('2024');
+    selectedSeasons.add('2025');
+  } else if (normalizedSelection === '2024/25' || normalizedSelection === '2024-25' || normalizedSelection === '202425') {
+    selectedSeasons.add('2024');
+    selectedSeasons.add('2025');
+  } else if (normalizedSelection === '2025/26' || normalizedSelection === '2025-26' || normalizedSelection === '202526') {
+    selectedSeasons.add('2025');
+  } else if (normalizedSelection === '2024' || normalizedSelection === '2025') {
+    selectedSeasons.add(normalizedSelection);
+  } else {
+    throw new Error(`Unsupported season selection: ${seasonSelection}`);
+  }
+
+  return rows.filter((row) => selectedSeasons.has(normalizeSeasonValue(row.season)));
 }
 
 export function mapDeliveryRecord(record: Record<string, string>, sourceFile: string, rowNumber: number): DeliveryRecord {
-  const battingTeam = canonicalizeTeamName(record.batting_team ?? record.battingTeam ?? '');
-  const bowlingTeam = canonicalizeTeamName(record.bowling_team ?? record.bowlingTeam ?? '');
-
   return {
     sourceRowNumber: rowNumber,
     sourceFile,
     match_id: String(record.match_id ?? record.matchId ?? ''),
-    season: String(record.season ?? ''),
+    season: normalizeSeasonValue(record.season ?? ''),
     match_number: String(record.match_number ?? record.matchNo ?? ''),
     inning: Number(record.inning ?? 0),
-    batting_team: battingTeam,
-    bowling_team: bowlingTeam,
+    batting_team: canonicalizeTeamName(record.batting_team ?? record.battingTeam ?? ''),
+    bowling_team: canonicalizeTeamName(record.bowling_team ?? record.bowlingTeam ?? ''),
     ball_over: String(record.ball_over ?? record.ballOver ?? ''),
     ball_result: String(record.ball_result ?? record.ballResult ?? ''),
     bowler: String(record.bowler ?? ''),
@@ -58,25 +64,22 @@ export function mapDeliveryRecord(record: Record<string, string>, sourceFile: st
 }
 
 export function mapMatchRecord(record: Record<string, string>, sourceFile: string, rowNumber: number): MatchRecord {
-  const team1 = canonicalizeTeamName(record.team_1 ?? record.team1 ?? '');
-  const team2 = canonicalizeTeamName(record.team_2 ?? record.team2 ?? '');
-
   return {
     sourceRowNumber: rowNumber,
     sourceFile,
     id: String(record.id ?? ''),
-    season: String(record.season ?? ''),
+    season: normalizeSeasonValue(record.season ?? ''),
     date: String(record.date ?? ''),
     city: String(record.city ?? ''),
     venue: String(record.venue ?? ''),
     stage: String(record.stage ?? ''),
-    team_1: team1,
-    team_2: team2,
+    team_1: canonicalizeTeamName(record.team_1 ?? record.team1 ?? ''),
+    team_2: canonicalizeTeamName(record.team_2 ?? record.team2 ?? ''),
     toss_winner: canonicalizeTeamName(record.toss_winner ?? ''),
     toss_decision: String(record.toss_decision ?? ''),
     result: String(record.result ?? ''),
-    dls_applied: record.dls_applied === '' ? null : record.dls_applied === '1' || record.dls_applied === 'true',
-    super_over: record.super_over === '' ? null : record.super_over === '1' || record.super_over === 'true',
+    dls_applied: parseBoolean(record.dls_applied ?? ''),
+    super_over: parseBoolean(record.super_over ?? ''),
     winner: canonicalizeTeamName(record.winner ?? ''),
     player_of_the_match: String(record.player_of_the_match ?? record.playerOfTheMatch ?? ''),
     win_by_runs: parseInteger(record.win_by_runs ?? record.winByRuns),
