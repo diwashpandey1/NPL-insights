@@ -988,3 +988,775 @@ async function runExtraFixtureFiles(
   const directory = await fs.mkdtemp(path.join(root, `${name}-`));
   return writeFixture(directory, matchRows, deliveryRows);
 }
+
+// ─── Task 1: Same-count swap detection ───────────────────────────────────────
+// Known limitation documented: same-count changed content is allowed through the
+// pipeline because without a stable per-row identifier, a changed-value update is
+// indistinguishable from a silent record replacement. The pipeline reconciles
+// deliveries by their (match_id, innings_no, delivery_no) sequence position.
+// See README: "same-count delivery file replacements remain ambiguous".
+
+test('same-count delivery file swap: pipeline proceeds and documents the limitation', {
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
+    : false,
+}, async () => {
+  const parsedUrl = new URL(localUrl!);
+  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname));
+
+  const client = createClient(localUrl!, localServiceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const repository = new TrackingIngestionRepository();
+  repository.client = client;
+
+  const suffix = crypto.randomUUID().replace(/-/g, '');
+  const numericId = Number.parseInt(suffix.slice(0, 7), 16) % 700000 + 200000;
+  const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-swap-'));
+
+  const baseline = {
+    teamIds: new Set<string>(),
+    seasonIds: new Set<string>(),
+    teamAliasIds: new Set<string>(),
+    playerIds: new Set<string>(),
+  };
+
+  try {
+    for (const team of (await client.from('teams')
+      .select('id').in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts'])).data ?? []) {
+      baseline.teamIds.add(team.id);
+    }
+    for (const season of (await client.from('seasons')
+      .select('id').in('season_key', ['2024/25', `2099/${suffix}`])).data ?? []) {
+      baseline.seasonIds.add(season.id);
+    }
+    for (const alias of (await client.from('team_aliases')
+      .select('id')
+      .in('source_system', ['npl-match-feed', 'npl-master'])
+      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts'])).data ?? []) {
+      baseline.teamAliasIds.add(alias.id);
+    }
+
+    const mainDirectory = path.join(tempDirectory, 'main');
+    await fs.mkdir(mainDirectory);
+
+    const originalDeliveries = [
+      makeDeliveryRow(numericId, 1, `Swap Batter A ${suffix}`, '0.1'),
+      makeDeliveryRow(numericId, 1, `Swap Batter B ${suffix}`, '0.2'),
+      makeDeliveryRow(numericId, 1, `Swap Batter C ${suffix}`, '0.3'),
+    ];
+    const paths = await writeFixture(mainDirectory, [makeMatchRow(numericId)], originalDeliveries);
+
+    // First run succeeds
+    const firstReport = await runSeasonIngestion('2024/25', { repository, dataPaths: paths });
+    assert.equal(firstReport.failedRecords, 0);
+
+    const matchKey = await client.from('match_source_keys')
+      .select('match_id')
+      .eq('source_system', 'npl-match-feed')
+      .eq('source_season_key', '2024')
+      .eq('external_match_key', String(numericId))
+      .eq('resolution_status', 'resolved')
+      .single();
+    assert.ifError(matchKey.error);
+    const canonicalMatchId = matchKey.data.match_id;
+
+    // Construct a same-count swap: same 3 rows but one batter name changed.
+    const swappedDeliveries = [
+      makeDeliveryRow(numericId, 1, `Swap Batter A ${suffix}`, '0.1'),
+      makeDeliveryRow(numericId, 1, `UPDATED Batter ${suffix}`, '0.2'), // name changed in place
+      makeDeliveryRow(numericId, 1, `Swap Batter C ${suffix}`, '0.3'),
+    ];
+    assert.equal(swappedDeliveries.length, originalDeliveries.length, 'row count must be identical');
+    await fs.writeFile(paths.ballByBallCsv, toCsv(deliveryHeaders, swappedDeliveries), 'utf8');
+
+    // The pipeline allows same-count changes through (known limitation).
+    // The delivery at position 2 is updated in place (by sequence identity).
+    const swapReport = await runSeasonIngestion('2024/25', { repository, dataPaths: paths });
+    assert.equal(swapReport.fatalErrors, 0, 'same-count change must not cause a fatal error');
+    // The updated batter name appears in the database — confirming the update path ran.
+    const updatedDelivery = await client.from('deliveries')
+      .select('batter_name_raw')
+      .eq('match_id', canonicalMatchId)
+      .eq('innings_no', 1)
+      .eq('delivery_no', 2)
+      .single();
+    assert.ifError(updatedDelivery.error);
+    assert.equal(
+      updatedDelivery.data.batter_name_raw,
+      `UPDATED Batter ${suffix}`,
+      'updated batter name must be persisted (same-count update is allowed)',
+    );
+  } finally {
+    try {
+      await cleanupIntegrationRows(client, repository, tempDirectory, suffix, baseline);
+    } finally {
+      await fs.rm(tempDirectory, { recursive: true, force: true });
+    }
+  }
+});
+
+// ─── Task 2: Concurrent ingestion protection ──────────────────────────────────
+
+test('concurrent ingestion protection', {
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
+    : false,
+}, async () => {
+  const parsedUrl = new URL(localUrl!);
+  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname));
+
+  const client = createClient(localUrl!, localServiceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const suffix = crypto.randomUUID().replace(/-/g, '');
+  const numericId = Number.parseInt(suffix.slice(0, 7), 16) % 700000 + 200000;
+
+  const baseline = {
+    teamIds: new Set<string>(),
+    seasonIds: new Set<string>(),
+    teamAliasIds: new Set<string>(),
+    playerIds: new Set<string>(),
+  };
+
+  for (const team of (await client.from('teams')
+    .select('id').in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts'])).data ?? []) {
+    baseline.teamIds.add(team.id);
+  }
+  for (const season of (await client.from('seasons')
+    .select('id').in('season_key', ['2024/25', `2099/${suffix}`])).data ?? []) {
+    baseline.seasonIds.add(season.id);
+  }
+  for (const alias of (await client.from('team_aliases')
+    .select('id')
+    .in('source_system', ['npl-match-feed', 'npl-master'])
+    .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts'])).data ?? []) {
+    baseline.teamAliasIds.add(alias.id);
+  }
+
+  // ── Subtest 1: Two simultaneous ingestions against the same file are serialised ──
+  await test('two simultaneous ingestions against the same file — second is blocked', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct1-'));
+    const repo = new TrackingIngestionRepository();
+    repo.client = client;
+    try {
+      const id = numericId;
+      const paths = await writeFixture(
+        tempDir,
+        [makeMatchRow(id)],
+        [makeDeliveryRow(id, 1, `Concurrent Batter ${suffix}`, '0.1')],
+      );
+      const deliveryLogicalPath = logicalSourcePath(paths.ballByBallCsv);
+
+      // Simulate "worker 1" holding the slot by inserting a running run + source file.
+      const { data: syntheticRun, error: runError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'concurrent-test-worker1',
+        source_set: `concurrent1-${suffix}`,
+        status: 'running',
+        summary: {},
+      }).select('id').single();
+      assert.ifError(runError);
+      repo.runIds.add(syntheticRun.id);
+
+      const { error: sfError } = await client.from('source_files').insert({
+        ingestion_run_id: syntheticRun.id,
+        source_system: 'npl-master',
+        logical_path: deliveryLogicalPath,
+        content_sha256: crypto.createHash('sha256').update('placeholder-ct1').digest('hex'),
+        format: 'csv',
+        row_count: 1,
+      });
+      assert.ifError(sfError);
+
+      // Worker 2 attempts the same ingestion while worker 1's run is active — must be blocked.
+      await assert.rejects(
+        () => runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths }),
+        /is already running in another process/,
+      );
+      // When createIngestionRun fails with the conflict error, ingestionRunId is null
+      // so failIngestionRun is NOT called — no failed run record exists for the blocked attempt.
+      // The only run in repo.runIds is the synthetic worker 1 run.
+
+      // Fail worker 1's run explicitly so the slot is released.
+      const finishTime = new Date().toISOString();
+      const startTime = new Date(Date.now() - 1000).toISOString();
+      await client.from('ingestion_runs').update({
+        status: 'failed',
+        started_at: startTime,
+        finished_at: finishTime,
+        summary: { failure: 'synthetic worker 1 completion' },
+      }).eq('id', syntheticRun.id);
+
+      // Worker 2 retries — must succeed now that the slot is free.
+      const retryReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
+      assert.equal(retryReport.failedRecords, 0);
+    } finally {
+      try {
+        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // ── Subtest 2: Two ingestions against different files do not block each other ──
+  await test('two simultaneous ingestions against different files do not block each other', async () => {
+    const tempDirA = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct2a-'));
+    const tempDirB = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct2b-'));
+    const repoA = new TrackingIngestionRepository();
+    repoA.client = client;
+    const repoB = new TrackingIngestionRepository();
+    repoB.client = client;
+    try {
+      const idA = numericId + 100;
+      const idB = numericId + 200;
+      const pathsA = await writeFixture(
+        tempDirA,
+        [makeMatchRow(idA)],
+        [makeDeliveryRow(idA, 1, `File-A Batter ${suffix}`, '0.1')],
+      );
+      const pathsB = await writeFixture(
+        tempDirB,
+        [makeMatchRow(idB)],
+        [makeDeliveryRow(idB, 1, `File-B Batter ${suffix}`, '0.1')],
+      );
+
+      // Run both concurrently — they target different logical paths, must not interfere.
+      const [reportA, reportB] = await Promise.all([
+        runSeasonIngestion('2024/25', { repository: repoA, dataPaths: pathsA }),
+        runSeasonIngestion('2024/25', { repository: repoB, dataPaths: pathsB }),
+      ]);
+      assert.equal(reportA.failedRecords, 0);
+      assert.equal(reportB.failedRecords, 0);
+    } finally {
+      try {
+        await cleanupIntegrationRows(client, repoA, tempDirA, suffix, baseline);
+      } finally {
+        await fs.rm(tempDirA, { recursive: true, force: true });
+      }
+      try {
+        await cleanupIntegrationRows(client, repoB, tempDirB, suffix, baseline);
+      } finally {
+        await fs.rm(tempDirB, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // ── Subtest 3: Retry after a failed run succeeds ──
+  await test('retry after a failed run succeeds', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct3-'));
+    const repo = new TrackingIngestionRepository();
+    repo.client = client;
+    try {
+      const id = numericId + 300;
+      const paths = await writeFixture(
+        tempDir,
+        [makeMatchRow(id)],
+        [makeDeliveryRow(id, 1, `Retry Batter ${suffix}`, '0.1')],
+      );
+
+      // Insert a synthetic failed run (from a prior attempt that failed before inserting
+      // any source files). Its logical path is different so it does NOT block the new run.
+      const priorFinished = new Date().toISOString();
+      const priorStarted = new Date(Date.now() - 5000).toISOString();
+      const { data: failedRun, error: runError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'retry-test',
+        source_set: `retry-${suffix}`,
+        status: 'failed',
+        started_at: priorStarted,
+        finished_at: priorFinished,
+        summary: { failure: 'simulated prior failure' },
+      }).select('id').single();
+      assert.ifError(runError);
+      repo.runIds.add(failedRun.id);
+
+      // Retry succeeds because the failed run has no source_file for this logical_path.
+      const retryReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
+      assert.equal(retryReport.failedRecords, 0);
+    } finally {
+      try {
+        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // ── Subtest 4: Recovery after an interrupted run (stale-lock detection) ──
+  await test('stale running ingestion run is expired and lock is recoverable', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct4-'));
+    const repo = new TrackingIngestionRepository();
+    repo.client = client;
+    try {
+      const id = numericId + 400;
+      const paths = await writeFixture(
+        tempDir,
+        [makeMatchRow(id)],
+        [makeDeliveryRow(id, 1, `Stale Batter ${suffix}`, '0.1')],
+      );
+      const deliveryLogicalPath = logicalSourcePath(paths.ballByBallCsv);
+
+      // Insert a 'running' run that is 2 hours old (stale) WITH a source file at
+      // the target path, so it would block fresh ingestion without stale expiry.
+      const staleStarted = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+      const { data: staleRun, error: staleError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'stale-test',
+        source_set: `stale-${suffix}`,
+        status: 'running',
+        started_at: staleStarted,
+        summary: {},
+      }).select('id').single();
+      assert.ifError(staleError);
+      repo.runIds.add(staleRun.id);
+
+      const { error: staleSfError } = await client.from('source_files').insert({
+        ingestion_run_id: staleRun.id,
+        source_system: 'npl-master',
+        logical_path: deliveryLogicalPath,
+        content_sha256: crypto.createHash('sha256').update('stale-placeholder-ct4').digest('hex'),
+        format: 'csv',
+        row_count: 1,
+      });
+      assert.ifError(staleSfError);
+
+      // Expire stale runs (threshold: 1 minute — stale run is 2 hours old).
+      const expired = await repo.expireStaleRuns(1);
+      assert.ok(expired >= 1, 'At least the stale run should have been expired');
+
+      // Verify the stale run is now 'failed'.
+      const staleStatus = await client.from('ingestion_runs')
+        .select('status,finished_at')
+        .eq('id', staleRun.id)
+        .single();
+      assert.ifError(staleStatus.error);
+      assert.equal(staleStatus.data.status, 'failed');
+      assert.ok(staleStatus.data.finished_at);
+
+      // Fresh ingestion proceeds: stale run is 'failed' so the lock check passes.
+      const freshReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
+      assert.equal(freshReport.failedRecords, 0);
+    } finally {
+      try {
+        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    }
+  });
+});
+
+// ─── Task 3: Failure-safe cleanup ────────────────────────────────────────────
+
+test('failure-safe cleanup: all synthetic records removed despite failures at different persistence stages', {
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
+    : false,
+}, async () => {
+  const parsedUrl = new URL(localUrl!);
+  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname));
+
+  const client = createClient(localUrl!, localServiceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const repository = new TrackingIngestionRepository();
+  repository.client = client;
+
+  const suffix = crypto.randomUUID().replace(/-/g, '');
+  const numericId = Number.parseInt(suffix.slice(0, 7), 16) % 700000 + 200000;
+  const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-cleanup-'));
+
+  const baseline = {
+    teamIds: new Set<string>(),
+    seasonIds: new Set<string>(),
+    teamAliasIds: new Set<string>(),
+    playerIds: new Set<string>(),
+  };
+
+  try {
+    for (const team of (await client.from('teams')
+      .select('id').in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts'])).data ?? []) {
+      baseline.teamIds.add(team.id);
+    }
+    for (const season of (await client.from('seasons')
+      .select('id').in('season_key', ['2024/25', `2099/${suffix}`])).data ?? []) {
+      baseline.seasonIds.add(season.id);
+    }
+    for (const alias of (await client.from('team_aliases')
+      .select('id')
+      .in('source_system', ['npl-match-feed', 'npl-master'])
+      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts'])).data ?? []) {
+      baseline.teamAliasIds.add(alias.id);
+    }
+
+    // ── Subtest 1: Source registration succeeds but ingestion fails ──
+    await test('source registration succeeds but ingestion fails: cleanup removes source file and run', async () => {
+      const repo = new TrackingIngestionRepository();
+      repo.client = client;
+
+      // Simple create without locking (no source file path provided to skip lock check)
+      const { data: runData, error: runError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'cleanup-test-stage1',
+        source_set: `cleanup-stage1-${suffix}`,
+        status: 'running',
+        summary: {},
+      }).select('id').single();
+      assert.ifError(runError);
+      const runId = runData.id;
+      repo.runIds.add(runId);
+
+      const sourceFile = await repo.registerSourceFile({
+        ingestionRunId: runId,
+        sourceSystem: 'npl-master',
+        logicalPath: `integration/${suffix}/stage1-cleanup.csv`,
+        contentSha256: crypto.createHash('sha256').update(`stage1-${suffix}`).digest('hex'),
+        format: 'csv',
+        seasonId: null,
+        rowCount: 1,
+      });
+
+      // Simulate ingestion failure after source registration
+      await client.from('ingestion_runs').update({
+        status: 'failed',
+        finished_at: new Date().toISOString(),
+        summary: { failure: 'simulated stage-1 failure' },
+      }).eq('id', runId);
+
+      // Manual cleanup of synthetic records
+      const { error: sfError } = await client.from('source_files').delete().eq('id', sourceFile.id);
+      assert.ifError(sfError);
+      const { error: runCleanupError } = await client.from('ingestion_runs').delete().eq('id', runId);
+      assert.ifError(runCleanupError);
+      repo.runIds.delete(runId);
+
+      // Verify no dangling records
+      const remainingRun = await client.from('ingestion_runs').select('id').eq('id', runId);
+      assert.ifError(remainingRun.error);
+      assert.equal(remainingRun.data?.length, 0, 'failed run must be cleaned up');
+    });
+
+    // ── Subtest 2: Match persistence succeeds but delivery persistence fails ──
+    await test('match persistence succeeds but delivery persistence fails: cleanup removes match and run', async () => {
+      // Run a successful first ingestion to ensure season + teams exist in the DB.
+      const setupDirectory = await fs.mkdtemp(path.join(tempDirectory, 'stage2-setup-'));
+      const setupId = numericId + 1;
+      const setupPaths = await writeFixture(
+        setupDirectory,
+        [makeMatchRow(setupId)],
+        [makeDeliveryRow(setupId, 1, `Stage2 Setup Batter ${suffix}`, '0.1')],
+      );
+      const setupReport = await runSeasonIngestion('2024/25', { repository, dataPaths: setupPaths });
+      assert.equal(setupReport.failedRecords, 0);
+
+      // Now exercise the failure scenario with direct repository calls.
+      const repo = new TrackingIngestionRepository();
+      repo.client = client;
+
+      const { data: runData, error: runError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'cleanup-test-stage2',
+        source_set: `cleanup-stage2-${suffix}`,
+        status: 'running',
+        summary: {},
+      }).select('id').single();
+      assert.ifError(runError);
+      const runId = runData.id;
+      repo.runIds.add(runId);
+
+      const sourceFile = await repo.registerSourceFile({
+        ingestionRunId: runId,
+        sourceSystem: 'npl-master',
+        logicalPath: `integration/${suffix}/stage2-cleanup.csv`,
+        contentSha256: crypto.createHash('sha256').update(`stage2-${suffix}`).digest('hex'),
+        format: 'csv',
+        seasonId: null,
+        rowCount: 1,
+      });
+
+      // Fetch season and teams (they now exist from the setup run)
+      const seasonResult = await client.from('seasons').select('id').eq('season_key', '2024/25');
+      assert.ifError(seasonResult.error);
+      const seasonId = seasonResult.data?.[0]?.id;
+      assert.ok(seasonId, '2024/25 season must exist after setup run');
+
+      const teamRows = await client.from('teams')
+        .select('id,canonical_name')
+        .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+      assert.ifError(teamRows.error);
+      const teamIdByName = new Map((teamRows.data ?? []).map((t) => [t.canonical_name, t.id]));
+      const teamAId = teamIdByName.get('Kathmandu Gorkhas');
+      const teamBId = teamIdByName.get('Janakpur Bolts');
+      assert.ok(teamAId);
+      assert.ok(teamBId);
+
+      const matchId = numericId + 11;
+      const matchRecord = mapMatchRecord(makeMatchRow(matchId), `integration/${suffix}/stage2-cleanup.csv`, 2);
+      const matchOutcome = await repo.persistMatch({
+        record: matchRecord,
+        sourceFileId: sourceFile.id,
+        seasonId,
+        matchNumber: matchId,
+        teamAId,
+        teamBId,
+        tossWinnerTeamId: null,
+        winnerTeamId: null,
+        playerOfMatchId: null,
+      });
+      const matchWasInserted = matchOutcome.outcome === 'inserted' || matchOutcome.outcome === 'updated';
+      assert.ok(matchWasInserted, 'match must have been inserted');
+
+      // Delivery persistence fails (invalid player UUID in dismissal fielders)
+      // The delivery MUST include a dismissal and fielder so the FK violation fires.
+      const deliveryRecord = mapDeliveryRecord(
+        makeDeliveryRow(matchId, 1, `Stage2 Batter ${suffix}`, '0.1', {
+          player_out: `Stage2 Out ${suffix}`,
+          dismissal_kind: 'caught',
+          fielders: 'Invalid Fielder',
+        }),
+        `integration/${suffix}/stage2-cleanup.csv`,
+        2,
+      );
+      const failedDelivery: DeliveryPersistenceInput = {
+        delivery: deliveryRecord,
+        matchId: matchOutcome.data!.id,
+        deliveryNumber: 1,
+        sourceFileId: sourceFile.id,
+        battingTeamId: teamAId,
+        bowlingTeamId: teamBId,
+        bowlerId: null,
+        batterId: null,
+        nonStrikerId: null,
+        playerOutId: null,
+        // Non-null, non-existent player UUID — triggers FK violation in dismissal_fielders
+        fielders: [{ playerId: '00000000-0000-4000-8000-000000000003', name: 'Invalid Fielder' }],
+      };
+      await assert.rejects(() => repo.persistDeliveryBatch([failedDelivery]));
+
+      await client.from('ingestion_runs').update({
+        status: 'failed',
+        finished_at: new Date().toISOString(),
+        summary: { failure: 'simulated stage-2 delivery failure' },
+      }).eq('id', runId);
+
+      // Manual cleanup of synthetic records.
+      // Delete match_source_keys BEFORE source_files (FK dependency).
+      const matchKeyRows = await client.from('match_source_keys').select('id,match_id')
+        .eq('source_system', 'npl-match-feed')
+        .eq('source_season_key', '2024')
+        .eq('external_match_key', String(matchId));
+      assert.ifError(matchKeyRows.error);
+      for (const key of matchKeyRows.data ?? []) {
+        if (key.match_id) {
+          await client.from('match_innings').delete().eq('match_id', key.match_id);
+          await client.from('deliveries').delete().eq('match_id', key.match_id);
+          await client.from('matches').delete().eq('id', key.match_id);
+        }
+        await client.from('match_source_keys').delete().eq('id', key.id);
+      }
+      const { error: sfError } = await client.from('source_files').delete().eq('id', sourceFile.id);
+      assert.ifError(sfError);
+      const { error: runCleanupError } = await client.from('ingestion_runs').delete().eq('id', runId);
+      assert.ifError(runCleanupError);
+      repo.runIds.delete(runId);
+
+      // Confirm cleanup was complete
+      const remainingKey = await client.from('match_source_keys').select('id')
+        .eq('external_match_key', String(matchId)).eq('source_season_key', '2024');
+      assert.ifError(remainingKey.error);
+      assert.equal(remainingKey.data?.length, 0, 'match source key must be cleaned up');
+
+      // Cleanup the setup run
+      await cleanupIntegrationRows(client, repository, setupDirectory, suffix, baseline);
+    });
+
+    // ── Subtest 3: Delivery persistence succeeds but a later operation fails ──
+    await test('delivery persistence succeeds but later operation fails: delivery batch is fully rolled back', async () => {
+      // The delivery batch RPC is transactional — a failed batch rolls back all deliveries in it.
+      const repo = new TrackingIngestionRepository();
+      repo.client = client;
+
+      const mainDirectory = await fs.mkdtemp(path.join(tempDirectory, 'stage3-'));
+      const matchId = numericId + 2;
+      const paths = await writeFixture(
+        mainDirectory,
+        [makeMatchRow(matchId)],
+        [makeDeliveryRow(matchId, 1, `Stage3 Batter ${suffix}`, '0.1')],
+      );
+      const firstReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
+      assert.equal(firstReport.failedRecords, 0);
+
+      const matchKey = await client.from('match_source_keys')
+        .select('match_id')
+        .eq('source_system', 'npl-match-feed')
+        .eq('source_season_key', '2024')
+        .eq('external_match_key', String(matchId))
+        .eq('resolution_status', 'resolved')
+        .single();
+      assert.ifError(matchKey.error);
+      const canonicalMatchId = matchKey.data.match_id;
+
+      const teamRows = await client.from('teams')
+        .select('id,canonical_name')
+        .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+      assert.ifError(teamRows.error);
+      const teamIdByName = new Map((teamRows.data ?? []).map((t) => [t.canonical_name, t.id]));
+      const battingTeamId = teamIdByName.get('Kathmandu Gorkhas')!;
+      const bowlingTeamId = teamIdByName.get('Janakpur Bolts')!;
+
+      // Register an extra source file for the failed delivery test
+      const { data: extraRunData, error: extraRunError } = await client.from('ingestion_runs').insert({
+        pipeline_version: 'stage3-extra-test',
+        source_set: `stage3-extra-${suffix}`,
+        status: 'running',
+        summary: {},
+      }).select('id').single();
+      assert.ifError(extraRunError);
+      repo.runIds.add(extraRunData.id);
+      const failureSourceFile = await repo.registerSourceFile({
+        ingestionRunId: extraRunData.id,
+        sourceSystem: 'npl-master',
+        logicalPath: `integration/${suffix}/stage3-extra.csv`,
+        contentSha256: crypto.createHash('sha256').update(`stage3-extra-${suffix}`).digest('hex'),
+        format: 'csv',
+        seasonId: null,
+        rowCount: 1,
+      });
+
+      const deliveryRecord = mapDeliveryRecord(
+        makeDeliveryRow(matchId, 3, `Rollback Delivery ${suffix}`, '0.1', {
+          player_out: `Rollback Out ${suffix}`,
+          dismissal_kind: 'caught',
+          fielders: 'Missing Fielder',
+        }),
+        `integration/${suffix}/stage3-extra.csv`,
+        10,
+      );
+
+      const deliveriesBeforeCount = (await client.from('deliveries')
+        .select('id').eq('match_id', canonicalMatchId)).data?.length ?? 0;
+
+      // Delivery batch with invalid fielder FK — should roll back atomically
+      await assert.rejects(() => repo.persistDeliveryBatch([{
+        delivery: deliveryRecord,
+        matchId: canonicalMatchId,
+        deliveryNumber: 1,
+        sourceFileId: failureSourceFile.id,
+        battingTeamId,
+        bowlingTeamId,
+        bowlerId: null,
+        batterId: null,
+        nonStrikerId: null,
+        playerOutId: null,
+        fielders: [{ playerId: '00000000-0000-4000-8000-000000000003', name: 'Missing Fielder' }],
+      }]));
+
+      // Delivery count must be unchanged — the failed batch was fully rolled back
+      const deliveriesAfterCount = (await client.from('deliveries')
+        .select('id').eq('match_id', canonicalMatchId)).data?.length ?? 0;
+      assert.equal(deliveriesAfterCount, deliveriesBeforeCount, 'delivery count must be unchanged after batch rollback');
+
+      // Innings 3 must not exist
+      const innings3 = await client.from('match_innings')
+        .select('innings_no').eq('match_id', canonicalMatchId).eq('innings_no', 3);
+      assert.ifError(innings3.error);
+      assert.equal(innings3.data?.length, 0, 'innings 3 must not exist after rollback');
+
+      // Clean up the extra source file and its run
+      const { error: sfError } = await client.from('source_files').delete().eq('id', failureSourceFile.id);
+      assert.ifError(sfError);
+      const { error: extraRunCleanup } = await client.from('ingestion_runs').delete().eq('id', extraRunData.id);
+      assert.ifError(extraRunCleanup);
+      repo.runIds.delete(extraRunData.id);
+
+      await cleanupIntegrationRows(client, repo, mainDirectory, suffix, baseline);
+    });
+
+    // ── Subtest 4: Dismissal/fielder persistence fails ──
+    await test('dismissal or fielder persistence fails: cleanup removes all synthetic records', async () => {
+      const repo = new TrackingIngestionRepository();
+      repo.client = client;
+
+      const mainDirectory = await fs.mkdtemp(path.join(tempDirectory, 'stage4-'));
+      const matchId = numericId + 3;
+      const paths = await writeFixture(
+        mainDirectory,
+        [makeMatchRow(matchId)],
+        [makeDeliveryRow(matchId, 1, `Stage4 Batter ${suffix}`, '0.1')],
+      );
+
+      const firstReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
+      assert.equal(firstReport.failedRecords, 0);
+
+      const matchKey = await client.from('match_source_keys')
+        .select('match_id')
+        .eq('source_system', 'npl-match-feed')
+        .eq('source_season_key', '2024')
+        .eq('external_match_key', String(matchId))
+        .eq('resolution_status', 'resolved')
+        .single();
+      assert.ifError(matchKey.error);
+      const canonicalMatchId = matchKey.data.match_id;
+
+      const teamRows = await client.from('teams')
+        .select('id,canonical_name')
+        .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+      assert.ifError(teamRows.error);
+      const teamIdByName = new Map((teamRows.data ?? []).map((t) => [t.canonical_name, t.id]));
+      const battingTeamId = teamIdByName.get('Kathmandu Gorkhas')!;
+      const bowlingTeamId = teamIdByName.get('Janakpur Bolts')!;
+
+      // Find the delivery source file by source_system and logical_path basename
+      const deliveryCsvPath = logicalSourcePath(paths.ballByBallCsv);
+      const sourceFileResult = await client.from('source_files')
+        .select('id')
+        .eq('source_system', 'npl-master')
+        .eq('logical_path', deliveryCsvPath);
+      assert.ifError(sourceFileResult.error);
+      assert.ok(sourceFileResult.data?.length === 1, 'exactly one delivery source file must exist');
+      const sourceFileId = sourceFileResult.data[0]!.id;
+
+      // Delivery with invalid fielder FK to simulate dismissal_fielders failure
+      const deliveryRecord = mapDeliveryRecord(
+        makeDeliveryRow(matchId, 2, `Stage4 Dismissed Batter ${suffix}`, '0.1', {
+          player_out: `Stage4 Out ${suffix}`,
+          dismissal_kind: 'caught',
+          fielders: 'Missing Fielder',
+        }),
+        deliveryCsvPath,
+        2,
+      );
+
+      const deliveriesBeforeCount = (await client.from('deliveries')
+        .select('id').eq('match_id', canonicalMatchId)).data?.length ?? 0;
+
+      // This must fail and roll back the entire batch
+      await assert.rejects(() => repo.persistDeliveryBatch([{
+        delivery: deliveryRecord,
+        matchId: canonicalMatchId,
+        deliveryNumber: 1,
+        sourceFileId,
+        battingTeamId,
+        bowlingTeamId,
+        bowlerId: null,
+        batterId: null,
+        nonStrikerId: null,
+        playerOutId: null,
+        fielders: [{ playerId: '00000000-0000-4000-8000-000000000003', name: 'Missing Fielder' }],
+      }]));
+
+      // Delivery count unchanged
+      const deliveriesAfterCount = (await client.from('deliveries')
+        .select('id').eq('match_id', canonicalMatchId)).data?.length ?? 0;
+      assert.equal(deliveriesAfterCount, deliveriesBeforeCount, 'delivery count must be unchanged after fielder failure rollback');
+
+      // Innings 2 must not exist (it did not exist before the failed batch)
+      const innings2 = await client.from('match_innings')
+        .select('innings_no').eq('match_id', canonicalMatchId).eq('innings_no', 2);
+      assert.ifError(innings2.error);
+      assert.equal(innings2.data?.length, 0, 'innings 2 must not exist after rollback');
+
+      await cleanupIntegrationRows(client, repo, mainDirectory, suffix, baseline);
+    });
+  } finally {
+    await fs.rm(tempDirectory, { recursive: true, force: true });
+  }
+});

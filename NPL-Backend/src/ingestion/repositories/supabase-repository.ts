@@ -37,9 +37,23 @@ export interface DeliveryPersistenceInput {
 
 export interface IngestionRepository {
   isAvailable(): boolean;
-  createIngestionRun(input: { pipelineVersion: string; sourceSet: string }): Promise<{ id: string }>;
+  /**
+   * Atomically creates an ingestion run for the given source file, failing if another
+   * 'running' run already exists for the same (sourceSystem, logicalPath) pair.
+   * Also expires any stale runs (started_at older than staleThresholdMinutes) before
+   * checking for conflicts, so interrupted workers do not permanently block the pipeline.
+   *
+   * Throws with a message containing 'concurrent_ingestion_conflict' if another run
+   * is already active.
+   */
+  createIngestionRun(input: { pipelineVersion: string; sourceSet: string; sourceSystem?: string; logicalPath?: string; staleThresholdMinutes?: number }): Promise<{ id: string }>;
   completeIngestionRun(runId: string, issueCount: number, counters: Record<string, number>, summary: Record<string, unknown>): Promise<void>;
   failIngestionRun(runId: string, message: string, counters: Record<string, number>): Promise<void>;
+  /**
+   * Marks any 'running' ingestion runs older than staleThresholdMinutes as 'failed'.
+   * Returns the number of runs expired. Used for stale-lock recovery.
+   */
+  expireStaleRuns(staleThresholdMinutes?: number): Promise<number>;
   registerSourceFile(input: {
     ingestionRunId: string;
     sourceSystem: string;
@@ -94,8 +108,36 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     return this.client;
   }
 
-  async createIngestionRun(input: { pipelineVersion: string; sourceSet: string }): Promise<{ id: string }> {
+  async createIngestionRun(input: { pipelineVersion: string; sourceSet: string; sourceSystem?: string; logicalPath?: string; staleThresholdMinutes?: number }): Promise<{ id: string }> {
     const client = this.ensureClient();
+
+    // When a source file path is provided, use the atomic lock+create function
+    // to prevent concurrent ingestion of the same source file.
+    if (input.sourceSystem && input.logicalPath) {
+      const { data, error } = await client.rpc('ingestion_acquire_run_lock', {
+        p_source_system: input.sourceSystem,
+        p_logical_path: input.logicalPath,
+        p_pipeline_version: input.pipelineVersion,
+        p_source_set: input.sourceSet,
+        p_stale_threshold_minutes: input.staleThresholdMinutes ?? 60,
+      }) as RpcResult<{ id: string }>;
+      if (error) {
+        // Translate the database-level error to a consistent application message.
+        if (error.message.includes('concurrent_ingestion_conflict')) {
+          throw new Error(
+            `Ingestion for ${input.logicalPath} is already running in another process. `
+            + 'Wait for it to finish or expire stale runs before retrying.',
+          );
+        }
+        throw new Error(`Failed to create ingestion run: ${error.message}`);
+      }
+      if (!data?.id) {
+        throw new Error('ingestion_acquire_run_lock returned no run id.');
+      }
+      return { id: data.id };
+    }
+
+    // Fallback: simple insert without locking (used for test/manual runs without a source path).
     const { data, error } = await client.from('ingestion_runs').insert({
       status: 'running',
       pipeline_version: input.pipelineVersion,
@@ -153,6 +195,17 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     if (error) {
       throw new Error(`Failed to mark ingestion run ${runId} as failed: ${error.message}`);
     }
+  }
+
+  async expireStaleRuns(staleThresholdMinutes = 60): Promise<number> {
+    const client = this.ensureClient();
+    const { data, error } = await client.rpc('ingestion_expire_stale_runs', {
+      p_stale_threshold_minutes: staleThresholdMinutes,
+    }) as RpcResult<number>;
+    if (error) {
+      throw new Error(`Failed to expire stale ingestion runs: ${error.message}`);
+    }
+    return data ?? 0;
   }
 
   async registerSourceFile(input: {
@@ -516,17 +569,17 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       const { delivery } = input;
       const dismissalRecords = delivery.player_out || delivery.dismissal_kind
         ? [{
-            dismissal_no: 1,
-            player_out_id: input.playerOutId,
-            player_out_name_raw: delivery.player_out || null,
-            dismissal_kind: delivery.dismissal_kind || 'unknown',
-            source_file_id: input.sourceFileId,
-            fielders: input.fielders.map((fielder, index) => ({
-              fielder_no: index + 1,
-              player_id: fielder.playerId,
-              fielder_name_raw: fielder.name,
-            })),
-          }]
+          dismissal_no: 1,
+          player_out_id: input.playerOutId,
+          player_out_name_raw: delivery.player_out || null,
+          dismissal_kind: delivery.dismissal_kind || 'unknown',
+          source_file_id: input.sourceFileId,
+          fielders: input.fielders.map((fielder, index) => ({
+            fielder_no: index + 1,
+            player_id: fielder.playerId,
+            fielder_name_raw: fielder.name,
+          })),
+        }]
         : [];
       return {
         delivery: {

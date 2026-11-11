@@ -10,6 +10,9 @@ const MATCH_SOURCE_SYSTEM = 'npl-match-feed';
 const DELIVERY_SOURCE_SYSTEM = 'npl-master';
 const INGESTION_PIPELINE_VERSION = 'phase-2-final-integrity-audit-v1';
 
+/** Minutes after which a 'running' ingestion run is considered abandoned. */
+const STALE_RUN_THRESHOLD_MINUTES = 60;
+
 export interface IngestionDataPaths {
   ballByBallCsv: string;
   matchCsv: string;
@@ -171,6 +174,11 @@ export async function runSeasonIngestion(
     const ingestionRun = await repository.createIngestionRun({
       pipelineVersion: INGESTION_PIPELINE_VERSION,
       sourceSet: seasonSelection,
+      // Pass the delivery source path so the repository can atomically check for
+      // concurrent runs and refuse to create a new one if another is already running.
+      sourceSystem: DELIVERY_SOURCE_SYSTEM,
+      logicalPath: logicalSourcePath(dataPaths.ballByBallCsv),
+      staleThresholdMinutes: STALE_RUN_THRESHOLD_MINUTES,
     });
     ingestionRunId = ingestionRun.id;
 
@@ -207,6 +215,11 @@ export async function runSeasonIngestion(
         + 'Deletion reconciliation is not implemented; refusing to persist this file.',
       );
     }
+    // Known limitation: same-count changed content is allowed through. Without a stable
+    // per-row identifier it is impossible to distinguish a legitimate field-value update
+    // from a silent record replacement (remove one row, add a different one). Deliveries
+    // are reconciled by their (match_id, innings_no, delivery_no) sequence identity.
+    // See README: "same-count delivery file replacements remain ambiguous".
 
     const deliveryFileUnchanged = sourceFileWasCompletedFor(deliverySourceFile, processedSeasons);
     const matchFileUnchanged = sourceFileWasCompletedFor(matchSourceFile, processedSeasons);

@@ -1,4 +1,7 @@
 import { spawnSync } from 'node:child_process';
+import { config } from 'dotenv';
+
+config({ path: '.env.local' });
 
 const requiredVariables = [
   'NPL_LOCAL_SUPABASE_URL',
