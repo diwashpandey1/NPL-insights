@@ -1,0 +1,26 @@
+match_id,season,inning,batting_team,bowling_team,runs,bat_runs,fours,sixes,extras,deliveries,wickets,legal_balls,boundaries,run_rate,powerplay_runs,powerplay_wickets,powerplay_fours,powerplay_sixes,middle_runs,middle_wickets,middle_fours,middle_sixes,death_runs,death_wickets,death_fours,death_sixes
+2_2025_21,2025,1,pokhara avengers,karnali yaks,201,195,19,12,6,124,2,120,31,10.05,44,1,6,2,94,0,8,6,63.0,1.0,5.0,4.0
+2_2025_6,2025,1,sudurpaschim royals,pokhara avengers,193,179,19,9,14,128,7,120,28,9.65,60,0,9,1,100,2,7,7,33.0,5.0,3.0,1.0
+1_2024_24,2024,2,kathmandu gurkhas,pokhara avengers,142,141,18,5,1,86,4,85,23,10.024,59,1,10,1,83,3,8,4,,,,
+2_2025_13,2025,1,lumbini lions,sudurpaschim royals,143,136,17,1,7,122,10,118,18,7.271,50,1,9,0,65,2,5,1,28.0,7.0,3.0,0.0
+1_2024_11,2024,2,pokhara avengers,lumbini lions,176,165,16,9,11,103,0,101,25,10.455,80,0,8,5,71,0,7,2,25.0,0.0,1.0,2.0
+1_2024_25,2024,2,janakpur bolts,chitwan rhinos,148,140,16,7,8,113,10,108,23,8.222,39,3,7,0,100,5,9,7,9.0,2.0,0.0,0.0
+2_2025_20,2025,2,janakpur bolts,chitwan rhinos,180,176,16,9,4,106,4,105,25,10.286,59,1,6,3,96,1,7,5,25.0,2.0,3.0,1.0
+2_2025_3,2025,2,pokhara avengers,biratnagar kings,167,162,16,9,5,117,10,113,25,8.867,77,1,8,6,56,6,3,2,34.0,3.0,5.0,1.0
+1_2024_15,2024,2,sudurpaschim royals,chitwan rhinos,131,124,15,2,7,116,10,110,17,7.145,48,3,7,0,56,3,5,1,27.0,4.0,3.0,1.0
+1_2024_4,2024,1,sudurpaschim royals,biratnagar kings,182,175,15,9,7,126,7,120,24,9.1,43,3,7,0,70,2,4,4,69.0,2.0,4.0,5.0
+1_2024_7,2024,2,biratnagar kings,lumbini lions,193,173,15,9,20,129,8,119,24,9.731,54,1,6,3,84,3,5,3,55.0,4.0,4.0,3.0
+1_2024_11,2024,1,lumbini lions,pokhara avengers,170,160,14,7,10,124,5,120,21,8.5,46,2,8,1,70,1,1,4,54.0,2.0,5.0,2.0
+1_2024_29,2024,1,karnali yaks,chitwan rhinos,175,168,14,8,7,121,6,120,22,8.75,49,2,7,2,71,2,3,4,55.0,2.0,4.0,2.0
+2_2025_22,2025,2,lumbini lions,biratnagar kings,145,137,14,4,8,113,5,106,18,8.208,46,2,7,0,78,2,5,4,21.0,1.0,2.0,0.0
+1_2024_10,2024,1,chitwan rhinos,karnali yaks,130,125,13,3,5,123,7,120,16,6.5,28,3,3,0,62,1,6,2,40.0,3.0,4.0,1.0
+1_2024_12,2024,1,sudurpaschim royals,lumbini lions,187,180,13,9,7,122,4,120,22,9.35,47,0,6,1,69,2,3,2,71.0,2.0,4.0,6.0
+1_2024_15,2024,1,chitwan rhinos,sudurpaschim royals,164,148,13,5,16,124,5,120,18,8.2,35,1,5,0,71,1,4,3,58.0,3.0,4.0,2.0
+1_2024_25,2024,1,chitwan rhinos,janakpur bolts,180,168,13,10,12,127,5,120,23,9.0,44,1,4,1,81,2,4,6,55.0,2.0,5.0,3.0
+1_2024_27,2024,2,pokhara avengers,sudurpaschim royals,148,133,13,5,15,126,10,118,18,7.525,41,3,5,2,59,2,5,0,48.0,5.0,3.0,3.0
+1_2024_32,2024,2,janakpur bolts,sudurpaschim royals,185,167,13,9,18,122,5,116,22,9.569,71,0,9,3,88,2,4,6,26.0,3.0,0.0,0.0
+2_2025_23,2025,1,kathmandu gorkhas,pokhara avengers,165,154,13,7,11,127,8,120,20,8.25,31,2,2,2,68,3,4,2,66.0,3.0,7.0,3.0
+2_2025_24,2025,2,chitwan rhinos,sudurpaschim royals,120,118,13,2,2,105,10,103,15,6.99,36,3,6,0,69,2,5,2,15.0,5.0,2.0,0.0
+2_2025_29,2025,1,sudurpaschim royals,biratnagar kings,155,149,13,4,6,122,7,120,17,7.75,42,1,6,0,62,3,2,2,51.0,3.0,5.0,2.0
+1_2024_16,2024,1,lumbini lions,chitwan rhinos,167,162,12,8,5,122,6,120,20,8.35,33,2,2,2,68,2,3,3,66.0,2.0,7.0,3.0
+1_2024_20,2024,2,pokhara avengers,biratnagar kings,139,132,12,5,7,121,6,120,17,6.95,59,1,7,2,37,4,2,0,43.0,1.0,3.0,3.0

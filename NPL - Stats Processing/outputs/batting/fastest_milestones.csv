@@ -1,0 +1,29 @@
+match_id,season,inning,batsman,innings_cumulative_runs,balls_to_milestone,milestone,runs_at_milestone
+2_2025_7,2025,2,mark watt,101,41,century,100
+1_2024_11,2024,2,andries gous,103,54,century,100
+2_2025_21,2025,1,adam rossington,101,55,century,100
+1_2024_25,2024,2,james neesham,53,18,half_century,50
+2_2025_23,2025,1,bhim sharki,51,19,half_century,50
+2_2025_26,2025,2,faf du plessis,50,19,half_century,50
+2_2025_4,2025,1,harmeet singh,53,19,half_century,50
+1_2024_11,2024,2,andries gous,52,20,half_century,50
+2_2025_21,2025,2,mark watt,50,22,half_century,50
+1_2024_4,2024,1,dipendra singh airee,51,23,half_century,50
+2_2025_20,2025,2,maaz sadaqat,51,24,half_century,50
+2_2025_15,2025,1,john simpson,52,25,half_century,50
+2_2025_3,2025,2,kushal bhurtel,50,25,half_century,50
+2_2025_26,2025,2,sam heazlett,51,26,half_century,50
+2_2025_23,2025,2,rishi dhawan,51,27,half_century,50
+2_2025_20,2025,2,anil sah,50,28,half_century,50
+1_2024_25,2024,1,kushal malla,50,28,half_century,50
+2_2025_3,2025,1,martin guptill,50,28,half_century,50
+2_2025_2,2025,1,priyank panchal,50,28,half_century,50
+1_2024_24,2024,2,stephen eskinazi,51,28,half_century,50
+2_2025_14,2025,1,sumeet verma,50,28,half_century,50
+2_2025_6,2025,1,josh brown,51,29,half_century,50
+2_2025_7,2025,2,mark watt,54,29,half_century,50
+2_2025_12,2025,1,ravi bopara,50,29,half_century,50
+2_2025_21,2025,1,adam rossington,50,30,half_century,50
+1_2024_9,2024,1,brandon mcmullen,50,31,half_century,50
+2_2025_6,2025,2,kushal bhurtel,53,31,half_century,50
+1_2024_32,2024,2,lahiru milantha,50,31,half_century,50

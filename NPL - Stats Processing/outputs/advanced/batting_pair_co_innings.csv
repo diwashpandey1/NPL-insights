@@ -1,0 +1,1802 @@
+match_id,inning,batsman,non_striker,runs,balls
+1_2024_1,1,anil kharel,chris sole,11,10
+1_2024_1,1,aqib ilyas,martin guptill,16,18
+1_2024_1,1,basir ahamad,martin guptill,4,4
+1_2024_1,1,basir ahamad,pratish gc,1,1
+1_2024_1,1,basir ahamad,rajesh pulami,3,3
+1_2024_1,1,basir ahamad,sandeep lamichhane,0,1
+1_2024_1,1,chris sole,anil kharel,4,3
+1_2024_1,1,chris sole,sandeep lamichhane,2,3
+1_2024_1,1,jitendra mukhiya,chris sole,0,1
+1_2024_1,1,lokesh bam,martin guptill,6,7
+1_2024_1,1,martin guptill,aqib ilyas,31,25
+1_2024_1,1,martin guptill,basir ahamad,16,9
+1_2024_1,1,martin guptill,lokesh bam,0,1
+1_2024_1,1,martin guptill,nicholas kirton,14,9
+1_2024_1,1,nicholas kirton,martin guptill,9,13
+1_2024_1,1,pratish gc,basir ahamad,2,3
+1_2024_1,1,rajesh pulami,basir ahamad,1,6
+1_2024_1,1,sandeep lamichhane,basir ahamad,1,1
+1_2024_1,1,sandeep lamichhane,chris sole,6,3
+1_2024_1,2,aasif sheikh,anil sah,0,3
+1_2024_1,2,anil sah,aasif sheikh,11,3
+1_2024_1,2,anil sah,lahiru milantha,1,4
+1_2024_1,2,harsh thaker,lahiru milantha,35,35
+1_2024_1,2,lahiru milantha,anil sah,3,6
+1_2024_1,2,lahiru milantha,harsh thaker,81,52
+1_2024_10,1,amar routela,ravi bopara,9,8
+1_2024_10,1,bipin rawal,deepak bohara,11,11
+1_2024_10,1,bipin rawal,ravi bopara,2,5
+1_2024_10,1,deepak bohara,bipin rawal,8,8
+1_2024_10,1,jan nicol loftie-eaton,ravi bopara,9,12
+1_2024_10,1,kushal malla,ravi bopara,25,29
+1_2024_10,1,luc benkenstein,deepak bohara,0,5
+1_2024_10,1,ravi bopara,amar routela,11,4
+1_2024_10,1,ravi bopara,bipin rawal,1,3
+1_2024_10,1,ravi bopara,jan nicol loftie-eaton,6,6
+1_2024_10,1,ravi bopara,kushal malla,35,22
+1_2024_10,1,ravi bopara,sharad vesawkar,7,5
+1_2024_10,1,sharad vesawkar,ravi bopara,6,3
+1_2024_10,1,sohail tanvir,ravi bopara,0,2
+1_2024_10,2,arjun gharti,zeeshan maqsood,11,10
+1_2024_10,2,chadwick walton,shikhar dhawan,31,19
+1_2024_10,2,chadwick walton,zeeshan maqsood,1,2
+1_2024_10,2,dev khanal,shikhar dhawan,26,35
+1_2024_10,2,shikhar dhawan,chadwick walton,20,16
+1_2024_10,2,shikhar dhawan,dev khanal,27,25
+1_2024_10,2,zeeshan maqsood,arjun gharti,9,13
+1_2024_10,2,zeeshan maqsood,chadwick walton,3,4
+1_2024_10,2,zeeshan maqsood,gulsan jha,4,1
+1_2024_11,1,aashutosh ghiraiya,unmukt chand,0,3
+1_2024_11,1,bibek yadav,rohit paudel,2,1
+1_2024_11,1,rohit paudel,bibek yadav,12,6
+1_2024_11,1,rohit paudel,sundeep jora,14,8
+1_2024_11,1,rohit paudel,tom moores,58,39
+1_2024_11,1,rohit paudel,unmukt chand,14,8
+1_2024_11,1,sundeep jora,rohit paudel,18,15
+1_2024_11,1,tom moores,rohit paudel,52,40
+1_2024_11,1,unmukt chand,rohit paudel,0,4
+1_2024_11,2,andries gous,dinesh kharel,105,55
+1_2024_11,2,dinesh kharel,andries gous,71,48
+1_2024_12,1,aarif sheikh,dipendra singh airee,0,1
+1_2024_12,1,binod bhandari,saif zaib,18,13
+1_2024_12,1,brandon mcmullen,saif zaib,23,20
+1_2024_12,1,dipendra singh airee,saif zaib,26,14
+1_2024_12,1,dipendra singh airee,scott kuggeleijn,16,7
+1_2024_12,1,saif zaib,binod bhandari,31,26
+1_2024_12,1,saif zaib,brandon mcmullen,34,23
+1_2024_12,1,saif zaib,dipendra singh airee,27,12
+1_2024_12,1,scott kuggeleijn,dipendra singh airee,12,6
+1_2024_12,2,arjun saud,unmukt chand,0,1
+1_2024_12,2,bibek yadav,dinesh adhikari,22,16
+1_2024_12,2,bibek yadav,durgesh gupta,18,12
+1_2024_12,2,bibek yadav,sundeep jora,15,19
+1_2024_12,2,bibek yadav,surya tamang,25,9
+1_2024_12,2,dinesh adhikari,bibek yadav,14,16
+1_2024_12,2,durgesh gupta,bibek yadav,0,1
+1_2024_12,2,ramon simmonds,bibek yadav,0,1
+1_2024_12,2,rohit paudel,sundeep jora,4,5
+1_2024_12,2,rohit paudel,unmukt chand,1,1
+1_2024_12,2,saad bin zafar,sundeep jora,0,1
+1_2024_12,2,sundeep jora,bibek yadav,22,25
+1_2024_12,2,sundeep jora,tom moores,1,3
+1_2024_12,2,surya tamang,bibek yadav,7,5
+1_2024_12,2,tom moores,sundeep jora,9,8
+1_2024_12,2,unmukt chand,rohit paudel,4,4
+1_2024_13,1,arjun gharti,william bosisto,1,4
+1_2024_13,1,bipin sharma,sompal kami,0,1
+1_2024_13,1,chadwick walton,dev khanal,1,5
+1_2024_13,1,dev khanal,shikhar dhawan,2,4
+1_2024_13,1,dev khanal,william bosisto,53,46
+1_2024_13,1,gulshan jha,william bosisto,0,1
+1_2024_13,1,nandan yadav,sompal kami,0,3
+1_2024_13,1,shikhar dhawan,dev khanal,6,6
+1_2024_13,1,unish singh,sompal kami,0,1
+1_2024_13,1,william bosisto,arjun gharti,2,2
+1_2024_13,1,william bosisto,dev khanal,49,35
+1_2024_13,1,william bosisto,zeeshan maqsood,17,12
+1_2024_13,1,zeeshan maqsood,sompal kami,0,1
+1_2024_13,1,zeeshan maqsood,william bosisto,2,2
+1_2024_13,2,aqib ilyas,lokesh bam,4,6
+1_2024_13,2,aqib ilyas,naren bhatta,4,8
+1_2024_13,2,basir ahamad,nicholas kirton,8,10
+1_2024_13,2,chris sole,pratish gc,4,3
+1_2024_13,2,dipak bohara,nicholas kirton,18,13
+1_2024_13,2,lokesh bam,aqib ilyas,7,3
+1_2024_13,2,lokesh bam,martin guptill,13,7
+1_2024_13,2,martin guptill,lokesh bam,5,5
+1_2024_13,2,naren bhatta,aqib ilyas,1,6
+1_2024_13,2,naren bhatta,nicholas kirton,6,10
+1_2024_13,2,nicholas kirton,basir ahamad,7,9
+1_2024_13,2,nicholas kirton,dipak bohara,26,19
+1_2024_13,2,nicholas kirton,naren bhatta,5,10
+1_2024_13,2,nicholas kirton,pratish gc,4,2
+1_2024_13,2,pratish gc,chris sole,1,1
+1_2024_13,2,pratish gc,nicholas kirton,1,1
+1_2024_13,2,pratish gc,sandeep lamichhane,6,5
+1_2024_13,2,sandeep lamichhane,pratish gc,6,5
+1_2024_14,1,aasif sheikh,anil sah,16,10
+1_2024_14,1,anil sah,aasif sheikh,32,23
+1_2024_14,1,anil sah,lahiru milantha,18,16
+1_2024_14,1,harsh thaker,james neesham,0,1
+1_2024_14,1,harsh thaker,lahiru milantha,1,2
+1_2024_14,1,hemant dhami,shubh kansakar,9,11
+1_2024_14,1,james neesham,harsh thaker,1,1
+1_2024_14,1,james neesham,shubh kansakar,0,1
+1_2024_14,1,lahiru milantha,anil sah,29,24
+1_2024_14,1,lahiru milantha,harsh thaker,3,3
+1_2024_14,1,lalit rajbanshi,shubh kansakar,0,1
+1_2024_14,1,mohammad mohsin,shubh kansakar,3,5
+1_2024_14,1,sher malla,shubh kansakar,0,2
+1_2024_14,1,shubh kansakar,hemant dhami,17,16
+1_2024_14,1,shubh kansakar,james neesham,1,1
+1_2024_14,1,shubh kansakar,mohammad mohsin,6,9
+1_2024_14,2,aashutosh ghiraiya,arjun saud,11,15
+1_2024_14,2,arjun saud,aashutosh ghiraiya,11,6
+1_2024_14,2,arjun saud,rohit paudel,14,17
+1_2024_14,2,ben cutting,sundeep jora,2,2
+1_2024_14,2,ben cutting,tom moores,2,6
+1_2024_14,2,bibek yadav,ben cutting,0,2
+1_2024_14,2,durgesh gupta,sundeep jora,5,3
+1_2024_14,2,rohit paudel,arjun saud,28,24
+1_2024_14,2,rohit paudel,tom moores,14,15
+1_2024_14,2,saad bin zafar,sundeep jora,1,2
+1_2024_14,2,sundeep jora,ben cutting,2,3
+1_2024_14,2,sundeep jora,durgesh gupta,2,2
+1_2024_14,2,sundeep jora,saad bin zafar,12,3
+1_2024_14,2,tom moores,ben cutting,4,4
+1_2024_14,2,tom moores,rohit paudel,27,19
+1_2024_15,1,amar routela,jan nicol loftie-eaton,6,3
+1_2024_15,1,bipin rawal,hassan eisakhil,20,21
+1_2024_15,1,hassan eisakhil,bipin rawal,30,24
+1_2024_15,1,hassan eisakhil,kushal malla,27,16
+1_2024_15,1,hassan eisakhil,santosh karki,8,12
+1_2024_15,1,jan nicol loftie-eaton,ravi bopara,4,4
+1_2024_15,1,kushal malla,hassan eisakhil,12,13
+1_2024_15,1,kushal malla,ravi bopara,6,4
+1_2024_15,1,ravi bopara,jan nicol loftie-eaton,20,10
+1_2024_15,1,ravi bopara,kushal malla,22,10
+1_2024_15,1,santosh karki,hassan eisakhil,9,7
+1_2024_15,2,aarif sheikh,dilpreet bajwa,4,9
+1_2024_15,2,binod bhandari,brandon mcmullen,10,7
+1_2024_15,2,binod bhandari,saif zaib,2,2
+1_2024_15,2,brandon mcmullen,binod bhandari,13,7
+1_2024_15,2,brandon mcmullen,dilpreet bajwa,0,2
+1_2024_15,2,dilpreet bajwa,aarif sheikh,3,6
+1_2024_15,2,dilpreet bajwa,brandon mcmullen,1,1
+1_2024_15,2,dilpreet bajwa,ishan pandey,8,9
+1_2024_15,2,dipendra singh airee,ishan pandey,1,2
+1_2024_15,2,ishan pandey,dilpreet bajwa,3,8
+1_2024_15,2,ishan pandey,dipendra singh airee,9,5
+1_2024_15,2,ishan pandey,naresh budayair,25,16
+1_2024_15,2,ishan pandey,scott kuggeleijn,0,1
+1_2024_15,2,naren saud,scott kuggeleijn,11,8
+1_2024_15,2,naresh budayair,ishan pandey,6,11
+1_2024_15,2,saif zaib,binod bhandari,19,12
+1_2024_15,2,scott kuggeleijn,abinash bohara,0,2
+1_2024_15,2,scott kuggeleijn,ishan pandey,1,1
+1_2024_15,2,scott kuggeleijn,naren saud,15,7
+1_2024_16,1,aashutosh ghiraiya,arjun saud,1,7
+1_2024_16,1,arjun saud,rohit paudel,15,12
+1_2024_16,1,rohit paudel,arjun saud,22,21
+1_2024_16,1,rohit paudel,saad bin zafar,61,36
+1_2024_16,1,rohit paudel,tom moores,1,1
+1_2024_16,1,saad bin zafar,rohit paudel,53,35
+1_2024_16,1,sundeep jora,saad bin zafar,4,3
+1_2024_16,1,tom moores,rohit paudel,10,5
+1_2024_16,1,unmukt chand,arjun saud,0,2
+1_2024_16,2,amar routela,kushal malla,6,6
+1_2024_16,2,bipin rawal,santosh karki,5,9
+1_2024_16,2,jan nicol loftie-eaton,kushal malla,7,7
+1_2024_16,2,kushal malla,amar routela,6,4
+1_2024_16,2,kushal malla,jan nicol loftie-eaton,9,6
+1_2024_16,2,kushal malla,ravi bopara,4,5
+1_2024_16,2,kushal malla,rijan dhakal,2,3
+1_2024_16,2,luc benkenstein,ravi bopara,31,29
+1_2024_16,2,nar sarki,rijan dhakal,25,14
+1_2024_16,2,ravi bopara,kushal malla,1,2
+1_2024_16,2,ravi bopara,luc benkenstein,11,14
+1_2024_16,2,rijan dhakal,kushal malla,2,3
+1_2024_16,2,rijan dhakal,nar sarki,14,11
+1_2024_16,2,santosh karki,bipin rawal,1,1
+1_2024_16,2,santosh karki,sohail tanvir,9,7
+1_2024_16,2,sohail tanvir,luc benkenstein,0,1
+1_2024_16,2,sohail tanvir,santosh karki,1,1
+1_2024_17,1,aakash chand,bipin khatri,1,3
+1_2024_17,1,andries gous,dinesh kharel,25,12
+1_2024_17,1,bipin khatri,aakash chand,8,4
+1_2024_17,1,bipin khatri,raymon reifer,2,5
+1_2024_17,1,dilip nath,raymon reifer,3,5
+1_2024_17,1,dinesh kharel,andries gous,21,11
+1_2024_17,1,dinesh kharel,kushal bhurtel,5,8
+1_2024_17,1,kushal bhurtel,dinesh kharel,0,2
+1_2024_17,1,kushal bhurtel,raymon reifer,10,9
+1_2024_17,1,matt critchley,raymon reifer,5,10
+1_2024_17,1,michael leask,raymon reifer,2,2
+1_2024_17,1,narayan joshi,raymon reifer,1,2
+1_2024_17,1,raymon reifer,bipin khatri,1,2
+1_2024_17,1,raymon reifer,dilip nath,3,3
+1_2024_17,1,raymon reifer,kushal bhurtel,13,17
+1_2024_17,1,raymon reifer,matt critchley,2,3
+1_2024_17,1,raymon reifer,narayan joshi,1,1
+1_2024_17,1,sagar dhakal,bipin khatri,0,1
+1_2024_17,2,babar hayat,chadwick walton,8,10
+1_2024_17,2,chadwick walton,babar hayat,4,10
+1_2024_17,2,chadwick walton,gulshan jha,41,25
+1_2024_17,2,dev khanal,babar hayat,2,3
+1_2024_17,2,gulshan jha,chadwick walton,19,25
+1_2024_17,2,gulshan jha,william bosisto,30,12
+1_2024_17,2,william bosisto,gulshan jha,2,6
+1_2024_18,1,aarif sheikh,ishan pandey,6,9
+1_2024_18,1,abinash bohara,naresh budayair,2,3
+1_2024_18,1,binod bhandari,brandon mcmullen,3,9
+1_2024_18,1,binod bhandari,harmeet singh,2,3
+1_2024_18,1,binod bhandari,saif zaib,28,25
+1_2024_18,1,brandon mcmullen,binod bhandari,14,10
+1_2024_18,1,brandon mcmullen,dipendra singh airee,1,2
+1_2024_18,1,brandon mcmullen,ishan pandey,1,6
+1_2024_18,1,dipendra singh airee,brandon mcmullen,0,3
+1_2024_18,1,harmeet singh,binod bhandari,1,3
+1_2024_18,1,ishan pandey,aarif sheikh,13,5
+1_2024_18,1,ishan pandey,brandon mcmullen,6,10
+1_2024_18,1,ishan pandey,scott kuggeleijn,0,1
+1_2024_18,1,naren saud,naresh budayair,3,4
+1_2024_18,1,naresh budayair,abinash bohara,5,2
+1_2024_18,1,naresh budayair,naren saud,3,3
+1_2024_18,1,naresh budayair,scott kuggeleijn,1,1
+1_2024_18,1,saif zaib,binod bhandari,27,23
+1_2024_18,1,scott kuggeleijn,ishan pandey,1,1
+1_2024_18,1,scott kuggeleijn,naresh budayair,6,2
+1_2024_18,2,aasif sheikh,anil sah,1,1
+1_2024_18,2,aasif sheikh,lahiru milantha,8,5
+1_2024_18,2,anil sah,aasif sheikh,5,8
+1_2024_18,2,arniko yadav,joshua tromp,1,4
+1_2024_18,2,harsh thaker,lahiru milantha,5,2
+1_2024_18,2,james neesham,joshua tromp,4,8
+1_2024_18,2,joshua tromp,arniko yadav,8,5
+1_2024_18,2,joshua tromp,james neesham,5,7
+1_2024_18,2,joshua tromp,lalit rajbanshi,0,1
+1_2024_18,2,joshua tromp,sher malla,1,1
+1_2024_18,2,kishore mahato,lalit rajbanshi,0,11
+1_2024_18,2,lahiru milantha,aasif sheikh,3,4
+1_2024_18,2,lahiru milantha,james neesham,5,4
+1_2024_18,2,lalit rajbanshi,joshua tromp,0,2
+1_2024_18,2,lalit rajbanshi,kishore mahato,4,7
+1_2024_18,2,sher malla,joshua tromp,0,4
+1_2024_18,2,shubh kansakar,james neesham,1,4
+1_2024_19,1,bhim sharki,daniel douthwaite,19,19
+1_2024_19,1,bhim sharki,gerhard erasmus,0,1
+1_2024_19,1,bhim sharki,karan kc,4,6
+1_2024_19,1,bhim sharki,pratik shrestha,2,5
+1_2024_19,1,bhim sharki,rashid khan,2,2
+1_2024_19,1,bhim sharki,stephen eskinazi,5,8
+1_2024_19,1,daniel douthwaite,bhim sharki,23,25
+1_2024_19,1,gerhard erasmus,bhim sharki,1,4
+1_2024_19,1,karan kc,bhim sharki,1,5
+1_2024_19,1,michael levitt,stephen eskinazi,0,2
+1_2024_19,1,pratik shrestha,bhim sharki,13,11
+1_2024_19,1,pratik shrestha,dipesh kandel,6,2
+1_2024_19,1,pratik shrestha,shahab alam,1,1
+1_2024_19,1,rashid khan,bhim sharki,1,2
+1_2024_19,1,shahab alam,pratik shrestha,8,5
+1_2024_19,1,stephen eskinazi,bhim sharki,12,15
+1_2024_19,1,stephen eskinazi,michael levitt,1,1
+1_2024_19,1,sumit maharjan,bhim sharki,4,4
+1_2024_19,2,aashutosh ghiraiya,arjun saud,4,12
+1_2024_19,2,abhishek gautam,surya tamang,0,1
+1_2024_19,2,arjun saud,aashutosh ghiraiya,3,8
+1_2024_19,2,arjun saud,unmukt chand,0,2
+1_2024_19,2,bibek yadav,sundeep jora,7,9
+1_2024_19,2,ramon simmonds,surya tamang,0,2
+1_2024_19,2,rohit paudel,unmukt chand,8,15
+1_2024_19,2,saad bin zafar,sundeep jora,0,1
+1_2024_19,2,sundeep jora,bibek yadav,1,2
+1_2024_19,2,sundeep jora,saad bin zafar,1,1
+1_2024_19,2,sundeep jora,surya tamang,22,22
+1_2024_19,2,sundeep jora,unmukt chand,3,5
+1_2024_19,2,surya tamang,abhishek gautam,2,2
+1_2024_19,2,surya tamang,sundeep jora,10,13
+1_2024_19,2,tom moores,unmukt chand,6,5
+1_2024_19,2,unmukt chand,arjun saud,1,2
+1_2024_19,2,unmukt chand,rohit paudel,15,13
+1_2024_19,2,unmukt chand,sundeep jora,1,3
+1_2024_19,2,unmukt chand,tom moores,1,1
+1_2024_2,1,bhim sharki,sumit maharjan,1,4
+1_2024_2,1,daniel douthwaite,dipesh kandel,4,5
+1_2024_2,1,daniel douthwaite,shahab alam,1,1
+1_2024_2,1,daniel douthwaite,sumit maharjan,16,12
+1_2024_2,1,dipesh kandel,daniel douthwaite,1,2
+1_2024_2,1,gerhard erasmus,sumit maharjan,4,4
+1_2024_2,1,karan kc,daniel douthwaite,1,2
+1_2024_2,1,michael levitt,stephen eskinazi,1,3
+1_2024_2,1,michael levitt,sumit maharjan,24,13
+1_2024_2,1,rashid khan,sumit maharjan,4,9
+1_2024_2,1,shahab alam,daniel douthwaite,1,3
+1_2024_2,1,shankar rana,sumit maharjan,18,18
+1_2024_2,1,stephen eskinazi,michael levitt,2,4
+1_2024_2,1,sumit maharjan,daniel douthwaite,13,16
+1_2024_2,1,sumit maharjan,gerhard erasmus,1,2
+1_2024_2,1,sumit maharjan,michael levitt,1,2
+1_2024_2,1,sumit maharjan,rashid khan,7,7
+1_2024_2,1,sumit maharjan,shankar rana,11,15
+1_2024_2,2,deepak bohara,hassan eisakhil,7,7
+1_2024_2,2,hassan eisakhil,deepak bohara,11,5
+1_2024_2,2,hassan eisakhil,luc benkenstein,1,2
+1_2024_2,2,kushal malla,luc benkenstein,13,10
+1_2024_2,2,kushal malla,ravi bopara,1,2
+1_2024_2,2,luc benkenstein,hassan eisakhil,12,5
+1_2024_2,2,luc benkenstein,kushal malla,10,12
+1_2024_2,2,ravi bopara,kushal malla,1,1
+1_2024_2,2,ravi bopara,santosh karki,10,8
+1_2024_2,2,santosh karki,ravi bopara,2,2
+1_2024_2,2,santosh karki,sharad vesawkar,32,28
+1_2024_2,2,sharad vesawkar,santosh karki,14,24
+1_2024_20,1,basir ahamad,pratish gc,3,2
+1_2024_20,1,basir ahamad,scott edwards,18,18
+1_2024_20,1,chris sole,basir ahamad,7,5
+1_2024_20,1,dipak bohara,basir ahamad,5,3
+1_2024_20,1,lokesh bam,martin guptill,21,14
+1_2024_20,1,lokesh bam,naren bhatta,6,3
+1_2024_20,1,martin guptill,lokesh bam,5,14
+1_2024_20,1,naren bhatta,lokesh bam,2,6
+1_2024_20,1,naren bhatta,scott edwards,2,5
+1_2024_20,1,nicholas kirton,scott edwards,20,16
+1_2024_20,1,pratish gc,basir ahamad,4,1
+1_2024_20,1,scott edwards,basir ahamad,22,20
+1_2024_20,1,scott edwards,naren bhatta,1,2
+1_2024_20,1,scott edwards,nicholas kirton,23,14
+1_2024_20,2,andries gous,dinesh kharel,35,16
+1_2024_20,2,andries gous,kushal bhurtel,8,11
+1_2024_20,2,dinesh kharel,andries gous,12,12
+1_2024_20,2,kushal bhurtel,andries gous,25,25
+1_2024_20,2,kushal bhurtel,raymon reifer,2,4
+1_2024_20,2,kushal bhurtel,zen malik,4,5
+1_2024_20,2,michael leask,raymon reifer,12,12
+1_2024_20,2,narayan joshi,raymon reifer,2,3
+1_2024_20,2,raymon reifer,kushal bhurtel,3,5
+1_2024_20,2,raymon reifer,michael leask,20,13
+1_2024_20,2,raymon reifer,narayan joshi,12,5
+1_2024_20,2,trit raj das,raymon reifer,0,1
+1_2024_20,2,zen malik,kushal bhurtel,4,9
+1_2024_21,1,bhim sharki,stephen eskinazi,4,11
+1_2024_21,1,daniel douthwaite,gerhard erasmus,1,5
+1_2024_21,1,dipesh kandel,shahab alam,0,2
+1_2024_21,1,gerhard erasmus,daniel douthwaite,2,2
+1_2024_21,1,gerhard erasmus,karan kc,0,3
+1_2024_21,1,gerhard erasmus,pratik shrestha,2,3
+1_2024_21,1,gerhard erasmus,rashid khan,21,14
+1_2024_21,1,gerhard erasmus,stephen eskinazi,0,1
+1_2024_21,1,karan kc,shahab alam,19,13
+1_2024_21,1,michael levitt,stephen eskinazi,8,6
+1_2024_21,1,pratik shrestha,gerhard erasmus,6,11
+1_2024_21,1,rashid khan,gerhard erasmus,7,16
+1_2024_21,1,shahab alam,karan kc,8,9
+1_2024_21,1,stephen eskinazi,bhim sharki,12,10
+1_2024_21,1,stephen eskinazi,gerhard erasmus,0,1
+1_2024_21,1,stephen eskinazi,michael levitt,11,9
+1_2024_21,1,sumit maharjan,gerhard erasmus,0,3
+1_2024_21,2,aasif sheikh,anil sah,0,2
+1_2024_21,2,aasif sheikh,lahiru milantha,2,7
+1_2024_21,2,anil sah,aasif sheikh,1,1
+1_2024_21,2,anil sah,harsh thaker,10,9
+1_2024_21,2,harsh thaker,anil sah,8,12
+1_2024_21,2,harsh thaker,james neesham,6,7
+1_2024_21,2,harsh thaker,mohammad mohsin,13,7
+1_2024_21,2,harsh thaker,shubh kansakar,2,1
+1_2024_21,2,james neesham,harsh thaker,27,17
+1_2024_21,2,lahiru milantha,aasif sheikh,16,20
+1_2024_21,2,mohammad mohsin,harsh thaker,14,8
+1_2024_21,2,shubh kansakar,harsh thaker,5,7
+1_2024_22,1,arjun gharti,william bosisto,26,26
+1_2024_22,1,babar hayat,chadwick walton,2,3
+1_2024_22,1,babar hayat,dev khanal,19,19
+1_2024_22,1,chadwick walton,babar hayat,8,7
+1_2024_22,1,chadwick walton,gulshan jha,5,7
+1_2024_22,1,chadwick walton,william bosisto,0,1
+1_2024_22,1,dev khanal,babar hayat,3,12
+1_2024_22,1,gulshan jha,chadwick walton,10,11
+1_2024_22,1,nandan yadav,zeeshan maqsood,0,1
+1_2024_22,1,sompal kami,william bosisto,7,2
+1_2024_22,1,sompal kami,zeeshan maqsood,0,1
+1_2024_22,1,william bosisto,arjun gharti,46,28
+1_2024_22,1,william bosisto,chadwick walton,0,1
+1_2024_22,1,william bosisto,sompal kami,1,2
+1_2024_22,1,zeeshan maqsood,sompal kami,1,1
+1_2024_22,2,aashutosh ghiraiya,arjun saud,6,10
+1_2024_22,2,aashutosh ghiraiya,rohit paudel,6,6
+1_2024_22,2,aashutosh ghiraiya,tom moores,4,5
+1_2024_22,2,arjun saud,aashutosh ghiraiya,13,6
+1_2024_22,2,ben cutting,tom moores,1,6
+1_2024_22,2,ramon simmonds,tilak bhandari,4,7
+1_2024_22,2,rohit paudel,aashutosh ghiraiya,10,8
+1_2024_22,2,saad bin zafar,tilak bhandari,2,1
+1_2024_22,2,saad bin zafar,tom moores,14,10
+1_2024_22,2,sundeep jora,tom moores,24,21
+1_2024_22,2,tilak bhandari,ramon simmonds,3,4
+1_2024_22,2,tilak bhandari,saad bin zafar,0,1
+1_2024_22,2,tom moores,aashutosh ghiraiya,1,7
+1_2024_22,2,tom moores,saad bin zafar,8,8
+1_2024_22,2,tom moores,sundeep jora,27,20
+1_2024_23,1,basir ahamad,martin guptill,37,27
+1_2024_23,1,basir ahamad,rajesh pulami,35,18
+1_2024_23,1,dipak bohara,martin guptill,4,3
+1_2024_23,1,lokesh bam,martin guptill,0,2
+1_2024_23,1,martin guptill,basir ahamad,28,21
+1_2024_23,1,martin guptill,nicholas kirton,13,13
+1_2024_23,1,martin guptill,scott edwards,4,1
+1_2024_23,1,nicholas kirton,martin guptill,10,15
+1_2024_23,1,rajesh pulami,basir ahamad,48,22
+1_2024_23,1,scott edwards,martin guptill,2,5
+1_2024_23,2,amar routela,deepak bohara,21,11
+1_2024_23,2,amar routela,kushal malla,21,18
+1_2024_23,2,basil hameed,kushal malla,1,3
+1_2024_23,2,deepak bohara,amar routela,3,5
+1_2024_23,2,deepak bohara,sohail tanvir,0,1
+1_2024_23,2,hassan eisakhil,santosh karki,5,6
+1_2024_23,2,kushal malla,amar routela,20,22
+1_2024_23,2,kushal malla,basil hameed,0,1
+1_2024_23,2,kushal malla,ravi bopara,6,3
+1_2024_23,2,ravi bopara,kushal malla,1,2
+1_2024_23,2,ravi bopara,santosh karki,19,22
+1_2024_23,2,santosh karki,hassan eisakhil,5,11
+1_2024_23,2,santosh karki,ravi bopara,27,18
+1_2024_23,2,sohail tanvir,deepak bohara,1,2
+1_2024_24,1,aakarshit gomel,dilip nath,8,15
+1_2024_24,1,andries gous,dinesh kharel,0,5
+1_2024_24,1,bipin khatri,raymon reifer,8,6
+1_2024_24,1,dilip nath,aakarshit gomel,19,13
+1_2024_24,1,dilip nath,kushal bhurtel,7,4
+1_2024_24,1,dilip nath,raymon reifer,6,8
+1_2024_24,1,dinesh kharel,andries gous,8,5
+1_2024_24,1,dinesh kharel,kushal bhurtel,31,21
+1_2024_24,1,kushal bhurtel,dilip nath,3,5
+1_2024_24,1,kushal bhurtel,dinesh kharel,5,6
+1_2024_24,1,michael leask,raymon reifer,1,2
+1_2024_24,1,narayan joshi,raymon reifer,0,1
+1_2024_24,1,raymon reifer,bipin khatri,12,7
+1_2024_24,1,raymon reifer,dilip nath,9,15
+1_2024_24,1,raymon reifer,michael leask,2,1
+1_2024_24,1,raymon reifer,sagar dhakal,18,7
+1_2024_24,1,sagar dhakal,raymon reifer,1,2
+1_2024_24,2,bhim sharki,stephen eskinazi,22,20
+1_2024_24,2,gerhard erasmus,karan kc,1,2
+1_2024_24,2,gerhard erasmus,rashid khan,14,6
+1_2024_24,2,gerhard erasmus,stephen eskinazi,10,2
+1_2024_24,2,karan kc,gerhard erasmus,1,3
+1_2024_24,2,michael levitt,stephen eskinazi,32,18
+1_2024_24,2,rashid khan,gerhard erasmus,1,1
+1_2024_24,2,stephen eskinazi,bhim sharki,35,18
+1_2024_24,2,stephen eskinazi,gerhard erasmus,0,1
+1_2024_24,2,stephen eskinazi,michael levitt,26,15
+1_2024_25,1,basil hameed,ravi bopara,2,2
+1_2024_25,1,basil hameed,sohail tanvir,1,1
+1_2024_25,1,bipin rawal,hassan eisakhil,9,12
+1_2024_25,1,hassan eisakhil,bipin rawal,15,7
+1_2024_25,1,hassan eisakhil,kushal malla,7,2
+1_2024_25,1,hassan eisakhil,santosh karki,8,12
+1_2024_25,1,kushal malla,hassan eisakhil,2,4
+1_2024_25,1,kushal malla,ravi bopara,73,40
+1_2024_25,1,ravi bopara,basil hameed,4,2
+1_2024_25,1,ravi bopara,kushal malla,40,30
+1_2024_25,1,santosh karki,hassan eisakhil,14,12
+1_2024_25,1,sohail tanvir,basil hameed,5,3
+1_2024_25,2,aasif sheikh,harsh thaker,10,11
+1_2024_25,2,aasif sheikh,james neesham,2,4
+1_2024_25,2,aasif sheikh,lahiru milantha,3,3
+1_2024_25,2,aasif sheikh,shubh kansakar,10,9
+1_2024_25,2,anil sah,aasif sheikh,8,6
+1_2024_25,2,harsh thaker,aasif sheikh,9,8
+1_2024_25,2,james neesham,aasif sheikh,8,4
+1_2024_25,2,james neesham,arniko yadav,12,4
+1_2024_25,2,james neesham,mohammad mohsin,46,15
+1_2024_25,2,james neesham,sher malla,0,1
+1_2024_25,2,kishore mahato,sher malla,4,8
+1_2024_25,2,lahiru milantha,aasif sheikh,1,4
+1_2024_25,2,lalit rajbanshi,sher malla,1,4
+1_2024_25,2,mohammad mohsin,james neesham,14,12
+1_2024_25,2,sher malla,kishore mahato,5,8
+1_2024_25,2,shubh kansakar,aasif sheikh,15,12
+1_2024_26,1,anil kharel,subash bhandari,0,1
+1_2024_26,1,basir ahamad,ismat alam,4,6
+1_2024_26,1,basir ahamad,rajesh pulami,10,8
+1_2024_26,1,chris sole,rajesh pulami,6,4
+1_2024_26,1,dipak bohara,lokesh bam,8,7
+1_2024_26,1,dipak bohara,nicholas kirton,7,7
+1_2024_26,1,dipak bohara,scott edwards,6,10
+1_2024_26,1,ismat alam,basir ahamad,5,13
+1_2024_26,1,lokesh bam,dipak bohara,9,10
+1_2024_26,1,nicholas kirton,dipak bohara,14,10
+1_2024_26,1,rajesh pulami,basir ahamad,4,5
+1_2024_26,1,rajesh pulami,chris sole,2,2
+1_2024_26,1,rajesh pulami,subash bhandari,21,16
+1_2024_26,1,sandeep lamichhane,rajesh pulami,0,2
+1_2024_26,1,scott edwards,basir ahamad,0,2
+1_2024_26,1,scott edwards,dipak bohara,15,12
+1_2024_26,1,subash bhandari,rajesh pulami,6,10
+1_2024_26,2,bhim sharki,gerhard erasmus,1,2
+1_2024_26,2,bhim sharki,pratik shrestha,0,3
+1_2024_26,2,daniel douthwaite,pratik shrestha,9,6
+1_2024_26,2,dipesh kandel,shankar rana,11,5
+1_2024_26,2,gerhard erasmus,bhim sharki,4,3
+1_2024_26,2,gerhard erasmus,michael levitt,8,4
+1_2024_26,2,karan kc,shankar rana,0,1
+1_2024_26,2,michael levitt,gerhard erasmus,0,1
+1_2024_26,2,michael levitt,stephen eskinazi,10,5
+1_2024_26,2,pratik shrestha,daniel douthwaite,6,7
+1_2024_26,2,pratik shrestha,rashid khan,23,15
+1_2024_26,2,pratik shrestha,shankar rana,11,12
+1_2024_26,2,rashid khan,pratik shrestha,14,15
+1_2024_26,2,shahab alam,shankar rana,2,8
+1_2024_26,2,shankar rana,dipesh kandel,7,5
+1_2024_26,2,shankar rana,pratik shrestha,3,6
+1_2024_26,2,shankar rana,shahab alam,10,12
+1_2024_26,2,stephen eskinazi,michael levitt,1,3
+1_2024_27,1,aarif sheikh,dipendra singh airee,21,17
+1_2024_27,1,aarif sheikh,harmeet singh,4,8
+1_2024_27,1,aarif sheikh,ishan pandey,11,8
+1_2024_27,1,aarif sheikh,scott kuggeleijn,11,5
+1_2024_27,1,binod bhandari,brandon mcmullen,14,14
+1_2024_27,1,binod bhandari,saif zaib,2,3
+1_2024_27,1,brandon mcmullen,binod bhandari,21,14
+1_2024_27,1,brandon mcmullen,harmeet singh,2,2
+1_2024_27,1,dipendra singh airee,aarif sheikh,20,16
+1_2024_27,1,harmeet singh,aarif sheikh,10,8
+1_2024_27,1,harmeet singh,brandon mcmullen,3,2
+1_2024_27,1,ishan pandey,aarif sheikh,11,11
+1_2024_27,1,naresh budayair,aarif sheikh,7,3
+1_2024_27,1,saif zaib,binod bhandari,14,9
+1_2024_27,1,scott kuggeleijn,aarif sheikh,2,3
+1_2024_27,2,andries gous,dilip nath,3,9
+1_2024_27,2,andries gous,dinesh kharel,22,7
+1_2024_27,2,andries gous,zen malik,11,5
+1_2024_27,2,bipin khatri,sagar dhakal,0,2
+1_2024_27,2,dilip nath,andries gous,1,4
+1_2024_27,2,dinesh kharel,andries gous,15,12
+1_2024_27,2,kiran thagunna,michael leask,1,1
+1_2024_27,2,kiran thagunna,raymon reifer,31,26
+1_2024_27,2,kiran thagunna,sudip aryal,1,2
+1_2024_27,2,kushal bhurtel,andries gous,0,3
+1_2024_27,2,michael leask,kiran thagunna,6,5
+1_2024_27,2,raymon reifer,kiran thagunna,39,25
+1_2024_27,2,raymon reifer,zen malik,6,8
+1_2024_27,2,sagar dhakal,sudip aryal,1,1
+1_2024_27,2,zen malik,andries gous,4,6
+1_2024_27,2,zen malik,raymon reifer,7,10
+1_2024_28,1,arjun gharti,nandan yadav,1,2
+1_2024_28,1,arjun gharti,sompal kami,4,4
+1_2024_28,1,babar hayat,chadwick walton,12,6
+1_2024_28,1,babar hayat,rit gautam,1,3
+1_2024_28,1,bipin sharma,arjun gharti,0,2
+1_2024_28,1,chadwick walton,dev khanal,9,9
+1_2024_28,1,chadwick walton,william bosisto,4,8
+1_2024_28,1,dev khanal,chadwick walton,7,12
+1_2024_28,1,gulshan jha,zeeshan maqsood,2,2
+1_2024_28,1,nandan yadav,arjun gharti,0,3
+1_2024_28,1,rit gautam,babar hayat,0,3
+1_2024_28,1,sompal kami,arjun gharti,6,5
+1_2024_28,1,sompal kami,zeeshan maqsood,6,5
+1_2024_28,1,william bosisto,chadwick walton,10,12
+1_2024_28,1,william bosisto,zeeshan maqsood,8,13
+1_2024_28,1,zeeshan maqsood,gulshan jha,0,1
+1_2024_28,1,zeeshan maqsood,sompal kami,0,3
+1_2024_28,1,zeeshan maqsood,william bosisto,31,32
+1_2024_28,2,aarif sheikh,ishan pandey,4,3
+1_2024_28,2,binod bhandari,saif zaib,6,6
+1_2024_28,2,brandon mcmullen,ishan pandey,3,6
+1_2024_28,2,dipendra singh airee,ishan pandey,38,29
+1_2024_28,2,ishan pandey,aarif sheikh,6,2
+1_2024_28,2,ishan pandey,brandon mcmullen,6,7
+1_2024_28,2,ishan pandey,dipendra singh airee,29,29
+1_2024_28,2,saif zaib,binod bhandari,3,7
+1_2024_28,2,saif zaib,brandon mcmullen,10,8
+1_2024_29,1,chadwick walton,dev khanal,7,5
+1_2024_29,1,chadwick walton,sompal kami,0,1
+1_2024_29,1,chadwick walton,william bosisto,42,17
+1_2024_29,1,dev khanal,chadwick walton,3,3
+1_2024_29,1,gulshan jha,william bosisto,0,3
+1_2024_29,1,jaykishan kolsawala,rit gautam,6,6
+1_2024_29,1,jaykishan kolsawala,william bosisto,32,22
+1_2024_29,1,jaykishan kolsawala,zeeshan maqsood,15,11
+1_2024_29,1,rit gautam,jaykishan kolsawala,0,1
+1_2024_29,1,sompal kami,chadwick walton,1,1
+1_2024_29,1,william bosisto,chadwick walton,25,12
+1_2024_29,1,william bosisto,gulshan jha,3,3
+1_2024_29,1,william bosisto,jaykishan kolsawala,27,24
+1_2024_29,1,zeeshan maqsood,jaykishan kolsawala,14,12
+1_2024_29,2,amar routela,ravi bopara,9,5
+1_2024_29,2,bipin rawal,hassan eisakhil,5,3
+1_2024_29,2,bipin rawal,luc benkenstein,13,7
+1_2024_29,2,hassan eisakhil,bipin rawal,2,3
+1_2024_29,2,kushal malla,luc benkenstein,11,11
+1_2024_29,2,kushal malla,ravi bopara,13,16
+1_2024_29,2,luc benkenstein,bipin rawal,4,4
+1_2024_29,2,luc benkenstein,kushal malla,12,9
+1_2024_29,2,ravi bopara,amar routela,9,4
+1_2024_29,2,ravi bopara,kushal malla,23,16
+1_2024_29,2,ravi bopara,santosh karki,20,12
+1_2024_29,2,ravi bopara,sharad vesawkar,2,2
+1_2024_29,2,rijan dhakal,sharad vesawkar,7,4
+1_2024_29,2,santosh karki,ravi bopara,10,16
+1_2024_29,2,sharad vesawkar,ranjit kumar,4,2
+1_2024_29,2,sharad vesawkar,ravi bopara,1,1
+1_2024_29,2,sharad vesawkar,rijan dhakal,5,7
+1_2024_29,2,sohail tanvir,ravi bopara,4,3
+1_2024_3,1,arjun gharti,gulshan jha,3,7
+1_2024_3,1,arjun gharti,sompal kami,31,16
+1_2024_3,1,babar hayat,chadwick walton,6,11
+1_2024_3,1,babar hayat,gulshan jha,5,12
+1_2024_3,1,babar hayat,zeeshan maqsood,1,2
+1_2024_3,1,chadwick walton,babar hayat,7,5
+1_2024_3,1,chadwick walton,shikhar dhawan,2,7
+1_2024_3,1,dev khanal,shikhar dhawan,2,6
+1_2024_3,1,gulshan jha,arjun gharti,8,5
+1_2024_3,1,gulshan jha,babar hayat,28,22
+1_2024_3,1,shikhar dhawan,chadwick walton,11,12
+1_2024_3,1,shikhar dhawan,dev khanal,6,5
+1_2024_3,1,sompal kami,arjun gharti,25,13
+1_2024_3,1,sompal kami,nandan yadav,6,2
+1_2024_3,1,zeeshan maqsood,babar hayat,0,2
+1_2024_3,2,aasif sheikh,anil sah,37,30
+1_2024_3,2,anil sah,aasif sheikh,47,32
+1_2024_3,2,anil sah,james neesham,9,6
+1_2024_3,2,anil sah,lahiru milantha,9,6
+1_2024_3,2,james neesham,anil sah,16,8
+1_2024_3,2,lahiru milantha,anil sah,24,13
+1_2024_30,1,aakash tripathi,james neesham,1,1
+1_2024_30,1,aakash tripathi,kishore mahato,4,3
+1_2024_30,1,aasif sheikh,lahiru milantha,5,3
+1_2024_30,1,aasif sheikh,shubh kansakar,6,7
+1_2024_30,1,arniko yadav,harsh thaker,6,12
+1_2024_30,1,arniko yadav,james neesham,5,8
+1_2024_30,1,harsh thaker,arniko yadav,10,9
+1_2024_30,1,harsh thaker,shubh kansakar,7,6
+1_2024_30,1,james neesham,aakash tripathi,5,3
+1_2024_30,1,james neesham,arniko yadav,17,12
+1_2024_30,1,james neesham,mohammad mohsin,24,9
+1_2024_30,1,kishore mahato,aakash tripathi,2,2
+1_2024_30,1,lahiru milantha,aasif sheikh,14,15
+1_2024_30,1,mohammad mohsin,james neesham,3,6
+1_2024_30,1,sher malla,aakash tripathi,3,3
+1_2024_30,1,shubh kansakar,aasif sheikh,12,11
+1_2024_30,1,shubh kansakar,harsh thaker,15,13
+1_2024_30,2,binod bhandari,brandon mcmullen,34,21
+1_2024_30,2,binod bhandari,dipendra singh airee,6,10
+1_2024_30,2,binod bhandari,saif zaib,22,27
+1_2024_30,2,brandon mcmullen,binod bhandari,25,19
+1_2024_30,2,dipendra singh airee,binod bhandari,20,16
+1_2024_30,2,saif zaib,binod bhandari,34,23
+1_2024_31,1,arjun gharti,gulshan jha,2,3
+1_2024_31,1,chadwick walton,gulshan jha,6,6
+1_2024_31,1,chadwick walton,william bosisto,6,7
+1_2024_31,1,dev khanal,jaykishan kolsawala,1,3
+1_2024_31,1,dev khanal,zeeshan maqsood,29,19
+1_2024_31,1,gulshan jha,arjun gharti,0,1
+1_2024_31,1,gulshan jha,chadwick walton,7,8
+1_2024_31,1,gulshan jha,nandan yadav,1,2
+1_2024_31,1,gulshan jha,sompal kami,17,9
+1_2024_31,1,jaykishan kolsawala,dev khanal,1,4
+1_2024_31,1,nandan yadav,gulshan jha,1,3
+1_2024_31,1,nandan yadav,unish singh,3,6
+1_2024_31,1,sompal kami,gulshan jha,5,8
+1_2024_31,1,unish singh,nandan yadav,12,17
+1_2024_31,1,william bosisto,chadwick walton,9,10
+1_2024_31,1,william bosisto,zeeshan maqsood,6,6
+1_2024_31,1,zeeshan maqsood,dev khanal,8,7
+1_2024_31,1,zeeshan maqsood,william bosisto,4,4
+1_2024_31,2,aakash tripathi,harsh thaker,10,16
+1_2024_31,2,aakash tripathi,lahiru milantha,5,5
+1_2024_31,2,aasif sheikh,lahiru milantha,0,3
+1_2024_31,2,aasif sheikh,shubh kansakar,5,4
+1_2024_31,2,harsh thaker,aakash tripathi,15,19
+1_2024_31,2,harsh thaker,james neesham,2,7
+1_2024_31,2,james neesham,harsh thaker,15,5
+1_2024_31,2,james neesham,mayan yadav,30,12
+1_2024_31,2,lahiru milantha,aakash tripathi,2,6
+1_2024_31,2,lahiru milantha,aasif sheikh,0,3
+1_2024_31,2,mayan yadav,james neesham,6,9
+1_2024_31,2,mayan yadav,mohammad mohsin,1,1
+1_2024_31,2,mayan yadav,sher malla,7,8
+1_2024_31,2,mohammad mohsin,mayan yadav,1,2
+1_2024_31,2,sher malla,kishore mahato,4,2
+1_2024_31,2,sher malla,mayan yadav,12,8
+1_2024_31,2,shubh kansakar,aasif sheikh,4,7
+1_2024_32,1,aarif sheikh,scott kuggeleijn,1,3
+1_2024_32,1,binod bhandari,brandon mcmullen,0,2
+1_2024_32,1,binod bhandari,saif zaib,41,29
+1_2024_32,1,brandon mcmullen,dipendra singh airee,3,4
+1_2024_32,1,brandon mcmullen,harmeet singh,12,8
+1_2024_32,1,dipendra singh airee,brandon mcmullen,3,2
+1_2024_32,1,dipendra singh airee,scott kuggeleijn,6,5
+1_2024_32,1,harmeet singh,brandon mcmullen,14,8
+1_2024_32,1,ishan pandey,naren saud,2,1
+1_2024_32,1,ishan pandey,scott kuggeleijn,4,1
+1_2024_32,1,naren saud,ishan pandey,1,1
+1_2024_32,1,naresh budayair,ishan pandey,8,3
+1_2024_32,1,saif zaib,binod bhandari,76,45
+1_2024_32,1,scott kuggeleijn,aarif sheikh,1,1
+1_2024_32,1,scott kuggeleijn,dipendra singh airee,12,8
+1_2024_32,1,scott kuggeleijn,ishan pandey,0,1
+1_2024_32,2,aakash tripathi,harsh thaker,2,6
+1_2024_32,2,aasif sheikh,lahiru milantha,34,19
+1_2024_32,2,harsh thaker,aakash tripathi,4,4
+1_2024_32,2,harsh thaker,james neesham,6,3
+1_2024_32,2,harsh thaker,lahiru milantha,30,18
+1_2024_32,2,harsh thaker,mayan yadav,1,1
+1_2024_32,2,james neesham,harsh thaker,4,7
+1_2024_32,2,lahiru milantha,aasif sheikh,39,25
+1_2024_32,2,lahiru milantha,harsh thaker,31,17
+1_2024_32,2,lahiru milantha,mohammad mohsin,23,11
+1_2024_32,2,mayan yadav,harsh thaker,2,3
+1_2024_32,2,mohammad mohsin,lahiru milantha,9,8
+1_2024_4,1,aarif sheikh,brandon mcmullen,9,5
+1_2024_4,1,amit shrestha,binod bhandari,1,5
+1_2024_4,1,basanta khatri,dipendra singh airee,5,4
+1_2024_4,1,binod bhandari,amit shrestha,12,7
+1_2024_4,1,binod bhandari,brandon mcmullen,13,15
+1_2024_4,1,brandon mcmullen,aarif sheikh,0,1
+1_2024_4,1,brandon mcmullen,binod bhandari,7,3
+1_2024_4,1,brandon mcmullen,ishan pandey,16,8
+1_2024_4,1,brandon mcmullen,saif zaib,13,14
+1_2024_4,1,dipendra singh airee,basanta khatri,22,6
+1_2024_4,1,dipendra singh airee,ishan pandey,30,14
+1_2024_4,1,dipendra singh airee,scott kuggeleijn,7,5
+1_2024_4,1,ishan pandey,brandon mcmullen,4,6
+1_2024_4,1,ishan pandey,dipendra singh airee,19,12
+1_2024_4,1,saif zaib,brandon mcmullen,14,15
+1_2024_4,1,scott kuggeleijn,dipendra singh airee,10,6
+1_2024_4,2,anil kharel,chris sole,10,11
+1_2024_4,2,basir ahamad,dipak bohara,4,2
+1_2024_4,2,basir ahamad,ismat alam,1,1
+1_2024_4,2,basir ahamad,rajesh pulami,19,25
+1_2024_4,2,chris sole,anil kharel,13,7
+1_2024_4,2,chris sole,dipak bohara,1,1
+1_2024_4,2,dipak bohara,basir ahamad,1,1
+1_2024_4,2,dipak bohara,chris sole,3,4
+1_2024_4,2,dipak bohara,sandeep lamichhane,1,1
+1_2024_4,2,ismat alam,basir ahamad,6,4
+1_2024_4,2,lokesh bam,martin guptill,2,3
+1_2024_4,2,lokesh bam,nicholas kirton,1,1
+1_2024_4,2,lokesh bam,rajesh pulami,0,4
+1_2024_4,2,martin guptill,lokesh bam,0,1
+1_2024_4,2,nicholas kirton,lokesh bam,5,9
+1_2024_4,2,pratish gc,dipak bohara,1,3
+1_2024_4,2,rajesh pulami,basir ahamad,13,10
+1_2024_4,2,rajesh pulami,lokesh bam,3,6
+1_2024_4,2,sandeep lamichhane,dipak bohara,8,6
+1_2024_5,1,amar routela,sharad vesawkar,13,6
+1_2024_5,1,deepak bohara,hassan eisakhil,2,4
+1_2024_5,1,hassan eisakhil,deepak bohara,1,1
+1_2024_5,1,hassan eisakhil,luc benkenstein,14,10
+1_2024_5,1,kushal malla,luc benkenstein,13,6
+1_2024_5,1,kushal malla,ravi bopara,27,18
+1_2024_5,1,luc benkenstein,hassan eisakhil,10,11
+1_2024_5,1,luc benkenstein,kushal malla,6,2
+1_2024_5,1,ravi bopara,kushal malla,41,31
+1_2024_5,1,ravi bopara,santosh karki,12,9
+1_2024_5,1,santosh karki,ravi bopara,8,8
+1_2024_5,1,santosh karki,sharad vesawkar,2,4
+1_2024_5,1,santosh karki,sohail tanvir,1,1
+1_2024_5,1,sharad vesawkar,amar routela,9,7
+1_2024_5,1,sharad vesawkar,santosh karki,2,5
+1_2024_5,1,sohail tanvir,santosh karki,0,1
+1_2024_5,2,bas de leede,dinesh kharel,0,1
+1_2024_5,2,bipin khatri,narayan joshi,12,8
+1_2024_5,2,bipin khatri,sagar dhakal,0,2
+1_2024_5,2,dilip nath,dinesh kharel,4,4
+1_2024_5,2,dinesh kharel,kiran thagunna,1,12
+1_2024_5,2,kiran thagunna,dinesh kharel,1,1
+1_2024_5,2,kiran thagunna,raymon reifer,0,1
+1_2024_5,2,kushal bhurtel,dinesh kharel,0,1
+1_2024_5,2,matt critchley,narayan joshi,7,9
+1_2024_5,2,matt critchley,raymon reifer,10,7
+1_2024_5,2,michael leask,raymon reifer,0,2
+1_2024_5,2,narayan joshi,bipin khatri,15,9
+1_2024_5,2,narayan joshi,matt critchley,23,18
+1_2024_5,2,raymon reifer,kiran thagunna,1,2
+1_2024_5,2,raymon reifer,matt critchley,0,7
+1_2024_5,2,sagar dhakal,bipin khatri,0,1
+1_2024_6,1,arjun gharti,shikhar dhawan,4,3
+1_2024_6,1,babar hayat,shikhar dhawan,16,20
+1_2024_6,1,chadwick walton,shikhar dhawan,22,16
+1_2024_6,1,dev khanal,shikhar dhawan,0,3
+1_2024_6,1,gulshan jha,shikhar dhawan,14,19
+1_2024_6,1,shikhar dhawan,arjun gharti,1,1
+1_2024_6,1,shikhar dhawan,babar hayat,7,8
+1_2024_6,1,shikhar dhawan,chadwick walton,4,5
+1_2024_6,1,shikhar dhawan,gulshan jha,16,18
+1_2024_6,1,shikhar dhawan,zeeshan maqsood,51,22
+1_2024_6,1,zeeshan maqsood,shikhar dhawan,14,11
+1_2024_6,2,bhim sharki,gerhard erasmus,0,1
+1_2024_6,2,bhim sharki,michael levitt,9,9
+1_2024_6,2,gerhard erasmus,bhim sharki,0,1
+1_2024_6,2,gerhard erasmus,sumit maharjan,40,29
+1_2024_6,2,karan kc,sumit maharjan,29,11
+1_2024_6,2,michael levitt,bhim sharki,20,13
+1_2024_6,2,michael levitt,shankar rana,3,3
+1_2024_6,2,michael levitt,stephen eskinazi,0,4
+1_2024_6,2,shankar rana,michael levitt,6,7
+1_2024_6,2,stephen eskinazi,michael levitt,3,6
+1_2024_6,2,sumit maharjan,gerhard erasmus,17,25
+1_2024_6,2,sumit maharjan,karan kc,16,10
+1_2024_6,2,sumit maharjan,rashid khan,6,3
+1_2024_6,2,sumit maharjan,shahab alam,4,1
+1_2024_7,1,aashutosh ghiraiya,arjun saud,16,13
+1_2024_7,1,arjun saud,aashutosh ghiraiya,7,7
+1_2024_7,1,arjun saud,rohit paudel,20,14
+1_2024_7,1,ben cutting,saad bin zafar,7,7
+1_2024_7,1,bibek yadav,ben cutting,1,2
+1_2024_7,1,bibek yadav,ramon simmonds,19,5
+1_2024_7,1,ramon simmonds,bibek yadav,2,3
+1_2024_7,1,rohit paudel,arjun saud,21,12
+1_2024_7,1,rohit paudel,tom moores,33,19
+1_2024_7,1,saad bin zafar,ben cutting,5,6
+1_2024_7,1,saad bin zafar,sundeep jora,11,7
+1_2024_7,1,sundeep jora,saad bin zafar,9,9
+1_2024_7,1,sundeep jora,tom moores,5,4
+1_2024_7,1,tom moores,rohit paudel,34,17
+1_2024_7,1,tom moores,sundeep jora,1,1
+1_2024_7,2,basir ahamad,lokesh bam,48,26
+1_2024_7,2,chris sole,dipak bohara,14,4
+1_2024_7,2,dipak bohara,lokesh bam,8,5
+1_2024_7,2,dipak bohara,pratish gc,1,1
+1_2024_7,2,dipak bohara,sandeep lamichhane,3,2
+1_2024_7,2,ismat alam,lokesh bam,0,3
+1_2024_7,2,lokesh bam,basir ahamad,30,19
+1_2024_7,2,lokesh bam,dipak bohara,6,3
+1_2024_7,2,lokesh bam,ismat alam,2,4
+1_2024_7,2,lokesh bam,martin guptill,34,21
+1_2024_7,2,lokesh bam,rajesh pulami,4,4
+1_2024_7,2,martin guptill,lokesh bam,28,17
+1_2024_7,2,nicholas kirton,lokesh bam,0,1
+1_2024_7,2,pratish gc,dipak bohara,7,4
+1_2024_7,2,rajesh pulami,lokesh bam,4,10
+1_2024_7,2,sandeep lamichhane,dipak bohara,4,5
+1_2024_8,1,andries gous,dinesh kharel,21,17
+1_2024_8,1,bipin khatri,narayan joshi,1,1
+1_2024_8,1,dilip nath,kushal bhurtel,5,3
+1_2024_8,1,dilip nath,matt critchley,9,11
+1_2024_8,1,dinesh kharel,andries gous,11,16
+1_2024_8,1,dinesh kharel,kushal bhurtel,1,3
+1_2024_8,1,kushal bhurtel,dilip nath,6,5
+1_2024_8,1,kushal bhurtel,dinesh kharel,1,2
+1_2024_8,1,matt critchley,dilip nath,16,10
+1_2024_8,1,matt critchley,raymon reifer,20,21
+1_2024_8,1,michael leask,narayan joshi,1,5
+1_2024_8,1,michael leask,raymon reifer,24,8
+1_2024_8,1,narayan joshi,bipin khatri,2,1
+1_2024_8,1,narayan joshi,michael leask,3,2
+1_2024_8,1,raymon reifer,matt critchley,12,16
+1_2024_8,1,raymon reifer,michael leask,5,4
+1_2024_8,2,aasif sheikh,anil sah,9,6
+1_2024_8,2,aasif sheikh,harsh thaker,8,10
+1_2024_8,2,aasif sheikh,lahiru milantha,24,20
+1_2024_8,2,anil sah,aasif sheikh,1,3
+1_2024_8,2,harsh thaker,aasif sheikh,2,6
+1_2024_8,2,harsh thaker,james neesham,11,8
+1_2024_8,2,james neesham,harsh thaker,40,20
+1_2024_8,2,lahiru milantha,aasif sheikh,48,35
+1_2024_9,1,aarif sheikh,dipendra singh airee,3,3
+1_2024_9,1,binod bhandari,brandon mcmullen,32,26
+1_2024_9,1,binod bhandari,dipendra singh airee,0,1
+1_2024_9,1,binod bhandari,saif zaib,6,3
+1_2024_9,1,brandon mcmullen,binod bhandari,54,36
+1_2024_9,1,dipendra singh airee,aarif sheikh,3,4
+1_2024_9,1,dipendra singh airee,rohan mustafa,20,15
+1_2024_9,1,dipendra singh airee,scott kuggeleijn,25,10
+1_2024_9,1,ishan pandey,scott kuggeleijn,1,5
+1_2024_9,1,rohan mustafa,dipendra singh airee,4,7
+1_2024_9,1,saif zaib,binod bhandari,11,9
+1_2024_9,1,scott kuggeleijn,dipendra singh airee,4,4
+1_2024_9,1,scott kuggeleijn,ishan pandey,4,3
+1_2024_9,2,bhim sharki,stephen eskinazi,10,8
+1_2024_9,2,gerhard erasmus,stephen eskinazi,10,5
+1_2024_9,2,karan kc,nathan sowter,0,1
+1_2024_9,2,karan kc,pratik shrestha,1,4
+1_2024_9,2,michael levitt,shankar rana,5,7
+1_2024_9,2,nathan sowter,shahab alam,1,1
+1_2024_9,2,pratik shrestha,karan kc,8,5
+1_2024_9,2,pratik shrestha,rashid khan,1,2
+1_2024_9,2,rashid khan,pratik shrestha,0,1
+1_2024_9,2,rashid khan,stephen eskinazi,2,9
+1_2024_9,2,shahab alam,nathan sowter,1,3
+1_2024_9,2,shankar rana,stephen eskinazi,3,7
+1_2024_9,2,stephen eskinazi,bhim sharki,1,5
+1_2024_9,2,stephen eskinazi,gerhard erasmus,1,2
+1_2024_9,2,stephen eskinazi,rashid khan,6,5
+1_2024_9,2,stephen eskinazi,shankar rana,19,12
+1_2024_9,2,stephen eskinazi,sumit maharjan,11,9
+1_2024_9,2,sumit maharjan,stephen eskinazi,14,10
+2_2025_1,1,aasif sheikh,jan nicol loftie-eaton,6,5
+2_2025_1,1,aasif sheikh,lahiru milantha,23,15
+2_2025_1,1,aasif sheikh,mayan yadav,23,18
+2_2025_1,1,aasif sheikh,sanjay krishnamurthi,2,3
+2_2025_1,1,anil sah,aasif sheikh,0,2
+2_2025_1,1,jan nicol loftie-eaton,aasif sheikh,2,8
+2_2025_1,1,kishore mahato,mayan yadav,4,1
+2_2025_1,1,lahiru milantha,aasif sheikh,11,12
+2_2025_1,1,lahiru samarakoon,mayan yadav,23,21
+2_2025_1,1,mayan yadav,aasif sheikh,9,12
+2_2025_1,1,mayan yadav,lahiru samarakoon,25,17
+2_2025_1,1,sanjay krishnamurthi,aasif sheikh,2,6
+2_2025_1,2,aakash tripathi,ben charlesworth,23,26
+2_2025_1,2,aakash tripathi,bhim sharki,2,2
+2_2025_1,2,aakash tripathi,milind kumar,15,17
+2_2025_1,2,ben charlesworth,aakash tripathi,47,24
+2_2025_1,2,bhim sharki,aakash tripathi,3,7
+2_2025_1,2,gerhard erasmus,mohammad aadil alam,1,1
+2_2025_1,2,john simpson,milind kumar,13,5
+2_2025_1,2,john simpson,mohammad aadil alam,0,1
+2_2025_1,2,milind kumar,aakash tripathi,12,19
+2_2025_1,2,milind kumar,john simpson,7,3
+2_2025_1,2,mohammad aadil alam,gerhard erasmus,8,4
+2_2025_10,1,aarif sheikh,chris lynn,10,13
+2_2025_10,1,aarif sheikh,dipendra singh airee,12,10
+2_2025_10,1,aarif sheikh,ishan pandey,5,2
+2_2025_10,1,abinash bohara,hemant dhami,1,3
+2_2025_10,1,binod bhandari,chris lynn,11,13
+2_2025_10,1,chris lynn,aarif sheikh,6,6
+2_2025_10,1,chris lynn,binod bhandari,12,14
+2_2025_10,1,dipendra singh airee,aarif sheikh,15,13
+2_2025_10,1,dipendra singh airee,harmeet singh,26,15
+2_2025_10,1,dipendra singh airee,scott kuggeleijn,3,3
+2_2025_10,1,harmeet singh,dipendra singh airee,22,17
+2_2025_10,1,hemant dhami,abinash bohara,1,2
+2_2025_10,1,hemant dhami,scott kuggeleijn,1,1
+2_2025_10,1,ishan pandey,aarif sheikh,2,2
+2_2025_10,1,josh brown,binod bhandari,0,1
+2_2025_10,1,naren saud,scott kuggeleijn,1,2
+2_2025_10,1,scott kuggeleijn,dipendra singh airee,2,3
+2_2025_10,1,scott kuggeleijn,hemant dhami,1,3
+2_2025_10,1,scott kuggeleijn,naren saud,8,3
+2_2025_10,2,arjun gharti,bipin sharma,9,19
+2_2025_10,2,arjun gharti,gulshan jha,2,2
+2_2025_10,2,arjun gharti,nandan yadav,1,1
+2_2025_10,2,arjun gharti,yuvraj khatri,1,2
+2_2025_10,2,bipin sharma,arjun gharti,0,1
+2_2025_10,2,gulshan jha,arjun gharti,3,5
+2_2025_10,2,gulshan jha,pawan sarraf,13,8
+2_2025_10,2,mark watt,priyank panchal,11,7
+2_2025_10,2,mark watt,william bosisto,7,4
+2_2025_10,2,najibullah zadran,pawan sarraf,0,2
+2_2025_10,2,najibullah zadran,william bosisto,1,2
+2_2025_10,2,nandan yadav,arjun gharti,1,4
+2_2025_10,2,pawan sarraf,gulshan jha,1,3
+2_2025_10,2,pawan sarraf,najibullah zadran,6,4
+2_2025_10,2,pawan sarraf,sompal kami,20,19
+2_2025_10,2,priyank panchal,mark watt,1,5
+2_2025_10,2,sompal kami,pawan sarraf,14,16
+2_2025_10,2,william bosisto,mark watt,2,6
+2_2025_10,2,william bosisto,najibullah zadran,1,3
+2_2025_10,2,yuvraj khatri,arjun gharti,0,4
+2_2025_11,1,aakash tripathi,ben charlesworth,1,7
+2_2025_11,1,aakash tripathi,milind kumar,19,20
+2_2025_11,1,aakash tripathi,rashid khan,13,10
+2_2025_11,1,ben charlesworth,aakash tripathi,0,1
+2_2025_11,1,gerhard erasmus,mohammad aadil alam,5,3
+2_2025_11,1,gerhard erasmus,santosh yadav,12,12
+2_2025_11,1,john simpson,milind kumar,7,3
+2_2025_11,1,karan kc,mohammad aadil alam,33,8
+2_2025_11,1,karan kc,shahab alam,3,3
+2_2025_11,1,milind kumar,aakash tripathi,12,17
+2_2025_11,1,milind kumar,john simpson,4,1
+2_2025_11,1,milind kumar,santosh yadav,1,2
+2_2025_11,1,mohammad aadil alam,gerhard erasmus,3,5
+2_2025_11,1,mohammad aadil alam,karan kc,1,2
+2_2025_11,1,rashid khan,aakash tripathi,14,10
+2_2025_11,1,santosh yadav,gerhard erasmus,24,14
+2_2025_11,1,santosh yadav,milind kumar,2,2
+2_2025_11,1,shahab alam,karan kc,3,2
+2_2025_11,2,abhishesh gautam,sher malla,2,4
+2_2025_11,2,abhishesh gautam,tilak bhandari,3,4
+2_2025_11,2,d'arcy short,rohit paudel,12,8
+2_2025_11,2,d'arcy short,sundeep jora,10,3
+2_2025_11,2,dilip nath,jj smit,5,10
+2_2025_11,2,dilip nath,rohit paudel,6,9
+2_2025_11,2,dilip nath,ruben trumpelmann,2,2
+2_2025_11,2,dilip nath,sher malla,18,14
+2_2025_11,2,dilip nath,sumit maharjan,0,1
+2_2025_11,2,gulbadin naib,rohit paudel,11,6
+2_2025_11,2,jj smit,dilip nath,8,7
+2_2025_11,2,rohit paudel,d'arcy short,3,4
+2_2025_11,2,rohit paudel,dilip nath,6,10
+2_2025_11,2,rohit paudel,gulbadin naib,2,2
+2_2025_11,2,ruben trumpelmann,dilip nath,5,3
+2_2025_11,2,sher malla,abhishesh gautam,20,5
+2_2025_11,2,sher malla,dilip nath,7,13
+2_2025_11,2,sumit maharjan,dilip nath,1,1
+2_2025_11,2,sundeep jora,d'arcy short,8,6
+2_2025_11,2,tilak bhandari,abhishesh gautam,6,8
+2_2025_12,1,amar routela,kushal malla,3,2
+2_2025_12,1,dawid malan,deepak bohara,12,4
+2_2025_12,1,dawid malan,dev khanal,5,5
+2_2025_12,1,deepak bohara,dawid malan,5,5
+2_2025_12,1,dev khanal,dawid malan,2,8
+2_2025_12,1,dev khanal,saif zaib,27,14
+2_2025_12,1,kushal malla,ravi bopara,20,14
+2_2025_12,1,ravi bopara,kushal malla,36,23
+2_2025_12,1,ravi bopara,saif zaib,32,17
+2_2025_12,1,saif zaib,dev khanal,15,14
+2_2025_12,1,saif zaib,ravi bopara,17,16
+2_2025_12,2,basir ahamad,naren bhatta,0,2
+2_2025_12,2,george munsey,lokesh bam,5,3
+2_2025_12,2,george munsey,naren bhatta,0,3
+2_2025_12,2,lokesh bam,george munsey,7,8
+2_2025_12,2,marchant de lange,pratish gc,28,14
+2_2025_12,2,marchant de lange,shubham ranjane,16,8
+2_2025_12,2,narayan joshi,shubham ranjane,4,14
+2_2025_12,2,naren bhatta,george munsey,0,2
+2_2025_12,2,naren bhatta,sam heazlett,0,1
+2_2025_12,2,naren bhatta,shubham ranjane,4,7
+2_2025_12,2,pratish gc,marchant de lange,8,7
+2_2025_12,2,pratish gc,sandeep lamichhane,22,5
+2_2025_12,2,sam heazlett,naren bhatta,22,11
+2_2025_12,2,sandeep lamichhane,pratish gc,4,2
+2_2025_12,2,shubham ranjane,marchant de lange,1,2
+2_2025_12,2,shubham ranjane,narayan joshi,4,6
+2_2025_12,2,shubham ranjane,naren bhatta,1,6
+2_2025_12,2,surya tamang,shubham ranjane,0,1
+2_2025_13,1,abhishesh gautam,tilak bhandari,6,3
+2_2025_13,1,d'arcy short,sumit maharjan,18,11
+2_2025_13,1,dilip nath,gulbadin naib,3,4
+2_2025_13,1,dilip nath,rohit paudel,29,25
+2_2025_13,1,dilip nath,sundeep jora,1,2
+2_2025_13,1,gulbadin naib,dilip nath,12,10
+2_2025_13,1,rohit paudel,dilip nath,23,22
+2_2025_13,1,rohit paudel,sumit maharjan,14,14
+2_2025_13,1,ruben trumpelmann,dilip nath,0,3
+2_2025_13,1,sher malla,sundeep jora,4,2
+2_2025_13,1,sumit maharjan,d'arcy short,8,6
+2_2025_13,1,sumit maharjan,rohit paudel,12,9
+2_2025_13,1,sundeep jora,sher malla,5,4
+2_2025_13,1,sundeep jora,thomas draca,2,3
+2_2025_13,1,thomas draca,sundeep jora,6,3
+2_2025_13,1,thomas draca,tilak bhandari,0,1
+2_2025_13,2,aarif sheikh,binod bhandari,41,38
+2_2025_13,2,binod bhandari,aarif sheikh,58,41
+2_2025_13,2,binod bhandari,chris lynn,13,7
+2_2025_13,2,binod bhandari,josh brown,0,1
+2_2025_13,2,chris lynn,binod bhandari,16,14
+2_2025_13,2,harmeet singh,binod bhandari,7,3
+2_2025_13,2,josh brown,binod bhandari,10,8
+2_2025_14,1,adam rossington,dinesh kharel,24,17
+2_2025_14,1,dan douthwaite,sumeet verma,8,4
+2_2025_14,1,dinesh kharel,adam rossington,37,34
+2_2025_14,1,dinesh kharel,sumeet verma,1,4
+2_2025_14,1,james neesham,sumeet verma,1,3
+2_2025_14,1,kiran thagunna,sumeet verma,1,1
+2_2025_14,1,kushal bhurtel,dinesh kharel,0,1
+2_2025_14,1,sumeet verma,dan douthwaite,1,1
+2_2025_14,1,sumeet verma,dinesh kharel,1,3
+2_2025_14,1,sumeet verma,kiran thagunna,9,4
+2_2025_14,1,sumeet verma,trit raj das,41,23
+2_2025_14,1,trit raj das,sumeet verma,31,29
+2_2025_14,2,aasif sheikh,maaz sadaqat,0,1
+2_2025_14,2,anil sah,sanjay krishnamurthi,1,8
+2_2025_14,2,jan nicol loftie-eaton,maaz sadaqat,3,6
+2_2025_14,2,kishore mahato,lalit rajbanshi,1,1
+2_2025_14,2,lalit rajbanshi,kishore mahato,4,1
+2_2025_14,2,lalit rajbanshi,wayne parnell,7,11
+2_2025_14,2,maaz sadaqat,aasif sheikh,7,3
+2_2025_14,2,maaz sadaqat,jan nicol loftie-eaton,11,8
+2_2025_14,2,maaz sadaqat,sanjay krishnamurthi,2,3
+2_2025_14,2,mayan yadav,sanjay krishnamurthi,4,8
+2_2025_14,2,rupesh singh,wayne parnell,7,12
+2_2025_14,2,sanjay krishnamurthi,anil sah,8,7
+2_2025_14,2,sanjay krishnamurthi,maaz sadaqat,1,2
+2_2025_14,2,sanjay krishnamurthi,mayan yadav,2,2
+2_2025_14,2,sanjay krishnamurthi,wayne parnell,16,11
+2_2025_14,2,shubh kansakar,maaz sadaqat,4,2
+2_2025_14,2,wayne parnell,lalit rajbanshi,27,13
+2_2025_14,2,wayne parnell,rupesh singh,13,11
+2_2025_14,2,wayne parnell,sanjay krishnamurthi,12,16
+2_2025_15,1,aakash tripathi,ben charlesworth,4,5
+2_2025_15,1,ben charlesworth,aakash tripathi,10,7
+2_2025_15,1,ben charlesworth,milind kumar,4,8
+2_2025_15,1,dipesh kandel,shahab alam,6,5
+2_2025_15,1,gerhard erasmus,mohammad aadil alam,2,4
+2_2025_15,1,john simpson,milind kumar,60,28
+2_2025_15,1,john simpson,mohammad aadil alam,0,1
+2_2025_15,1,karan kc,mohammad aadil alam,1,1
+2_2025_15,1,karan kc,shahab alam,0,1
+2_2025_15,1,milind kumar,ben charlesworth,0,1
+2_2025_15,1,milind kumar,john simpson,38,42
+2_2025_15,1,mohammad aadil alam,gerhard erasmus,4,3
+2_2025_15,1,mohammad aadil alam,karan kc,4,2
+2_2025_15,1,rashid khan,ben charlesworth,6,6
+2_2025_15,1,santosh yadav,karan kc,0,2
+2_2025_15,1,shahab alam,dipesh kandel,3,4
+2_2025_15,2,arjun saud,ravi bopara,2,5
+2_2025_15,2,dawid malan,dev khanal,7,10
+2_2025_15,2,deepak bohara,dawid malan,0,5
+2_2025_15,2,dev khanal,dawid malan,9,8
+2_2025_15,2,dev khanal,kushal malla,3,4
+2_2025_15,2,dev khanal,saif zaib,9,6
+2_2025_15,2,kamal singh airee,rijan dhakal,8,6
+2_2025_15,2,kamal singh airee,sohail tanvir,1,2
+2_2025_15,2,kushal malla,dev khanal,3,5
+2_2025_15,2,kushal malla,ravi bopara,4,9
+2_2025_15,2,ranjeet kumar,rijan dhakal,0,1
+2_2025_15,2,ravi bopara,arjun saud,1,2
+2_2025_15,2,ravi bopara,kushal malla,7,7
+2_2025_15,2,ravi bopara,sohail tanvir,13,14
+2_2025_15,2,rijan dhakal,kamal singh airee,1,1
+2_2025_15,2,saif zaib,dev khanal,1,3
+2_2025_15,2,sohail tanvir,kamal singh airee,8,6
+2_2025_15,2,sohail tanvir,ravi bopara,12,12
+2_2025_16,1,gulshan jha,william bosisto,21,11
+2_2025_16,1,mark watt,priyank panchal,7,10
+2_2025_16,1,najibullah zadran,william bosisto,13,6
+2_2025_16,1,priyank panchal,mark watt,16,9
+2_2025_16,1,priyank panchal,william bosisto,52,39
+2_2025_16,1,william bosisto,gulshan jha,6,5
+2_2025_16,1,william bosisto,najibullah zadran,1,1
+2_2025_16,1,william bosisto,priyank panchal,44,42
+2_2025_16,2,basir ahamad,narayan joshi,41,20
+2_2025_16,2,basir ahamad,pratish gc,1,1
+2_2025_16,2,basir ahamad,sahil patel,18,20
+2_2025_16,2,basir ahamad,sandeep lamichhane,9,3
+2_2025_16,2,george munsey,lokesh bam,0,2
+2_2025_16,2,lokesh bam,george munsey,6,7
+2_2025_16,2,lokesh bam,sam heazlett,0,4
+2_2025_16,2,marchant de lange,basir ahamad,2,2
+2_2025_16,2,narayan joshi,basir ahamad,28,17
+2_2025_16,2,pratish gc,basir ahamad,10,5
+2_2025_16,2,sahil patel,basir ahamad,16,17
+2_2025_16,2,sahil patel,sam heazlett,5,8
+2_2025_16,2,sam heazlett,lokesh bam,11,9
+2_2025_16,2,sam heazlett,sahil patel,7,5
+2_2025_16,2,sandeep lamichhane,basir ahamad,3,2
+2_2025_16,2,sandeep lamichhane,pratish gc,6,2
+2_2025_17,1,adam rossington,dinesh kharel,8,12
+2_2025_17,1,adam rossington,james neesham,64,46
+2_2025_17,1,adam rossington,sumeet verma,15,10
+2_2025_17,1,adam rossington,trit raj das,2,3
+2_2025_17,1,dinesh kharel,adam rossington,7,11
+2_2025_17,1,james neesham,adam rossington,28,24
+2_2025_17,1,james neesham,kiran thagunna,24,9
+2_2025_17,1,kiran thagunna,james neesham,1,2
+2_2025_17,1,kushal bhurtel,adam rossington,0,1
+2_2025_17,1,sumeet verma,adam rossington,0,5
+2_2025_17,1,trit raj das,adam rossington,1,6
+2_2025_17,2,d'arcy short,rohit paudel,7,12
+2_2025_17,2,d'arcy short,sumit maharjan,2,3
+2_2025_17,2,dilip nath,rohit paudel,10,6
+2_2025_17,2,gulbadin naib,sundeep jora,17,11
+2_2025_17,2,niroshan dickwella,rohit paudel,37,22
+2_2025_17,2,rohit paudel,d'arcy short,13,11
+2_2025_17,2,rohit paudel,dilip nath,8,8
+2_2025_17,2,rohit paudel,niroshan dickwella,17,14
+2_2025_17,2,rohit paudel,sundeep jora,3,4
+2_2025_17,2,ruben trumpelmann,sundeep jora,11,7
+2_2025_17,2,sumit maharjan,d'arcy short,0,2
+2_2025_17,2,sundeep jora,gulbadin naib,10,9
+2_2025_17,2,sundeep jora,rohit paudel,3,6
+2_2025_17,2,sundeep jora,ruben trumpelmann,3,3
+2_2025_17,2,sundeep jora,sher malla,10,4
+2_2025_18,1,aaditya mahata,sanjay krishnamurthi,20,13
+2_2025_18,1,aaditya mahata,wayne parnell,0,1
+2_2025_18,1,aasif sheikh,maaz sadaqat,0,2
+2_2025_18,1,jan nicol loftie-eaton,maaz sadaqat,16,13
+2_2025_18,1,jan nicol loftie-eaton,sanjay krishnamurthi,23,20
+2_2025_18,1,maaz sadaqat,aasif sheikh,5,2
+2_2025_18,1,maaz sadaqat,jan nicol loftie-eaton,8,7
+2_2025_18,1,mayan yadav,maaz sadaqat,6,10
+2_2025_18,1,rupesh singh,wayne parnell,2,2
+2_2025_18,1,sanjay krishnamurthi,aaditya mahata,35,18
+2_2025_18,1,sanjay krishnamurthi,jan nicol loftie-eaton,16,21
+2_2025_18,1,shubh kansakar,aaditya mahata,0,1
+2_2025_18,1,wayne parnell,aaditya mahata,2,4
+2_2025_18,1,wayne parnell,rupesh singh,12,8
+2_2025_18,2,binod bhandari,chris lynn,0,3
+2_2025_18,2,binod bhandari,ishan pandey,47,46
+2_2025_18,2,chris lynn,binod bhandari,1,5
+2_2025_18,2,dipendra singh airee,harmeet singh,3,2
+2_2025_18,2,dipendra singh airee,ishan pandey,8,6
+2_2025_18,2,harmeet singh,dipendra singh airee,30,11
+2_2025_18,2,ishan pandey,binod bhandari,45,29
+2_2025_18,2,ishan pandey,dipendra singh airee,14,6
+2_2025_18,2,josh brown,binod bhandari,0,1
+2_2025_19,1,deepak dumre,gulshan jha,11,13
+2_2025_19,1,gulshan jha,deepak dumre,44,18
+2_2025_19,1,gulshan jha,nandan yadav,5,3
+2_2025_19,1,gulshan jha,sompal kami,2,3
+2_2025_19,1,mark watt,pawan sarraf,30,23
+2_2025_19,1,mark watt,william bosisto,0,4
+2_2025_19,1,najibullah zadran,pawan sarraf,10,9
+2_2025_19,1,najibullah zadran,sompal kami,3,5
+2_2025_19,1,nandan yadav,gulshan jha,1,3
+2_2025_19,1,pawan sarraf,mark watt,29,23
+2_2025_19,1,pawan sarraf,najibullah zadran,7,6
+2_2025_19,1,priyank panchal,mark watt,0,1
+2_2025_19,1,sompal kami,gulshan jha,1,5
+2_2025_19,1,sompal kami,najibullah zadran,5,6
+2_2025_19,1,william bosisto,mark watt,1,1
+2_2025_19,2,aakash tripathi,ben charlesworth,9,12
+2_2025_19,2,ben charlesworth,aakash tripathi,31,15
+2_2025_19,2,ben charlesworth,milind kumar,4,6
+2_2025_19,2,bhim sharki,gerhard erasmus,6,2
+2_2025_19,2,gerhard erasmus,john simpson,39,23
+2_2025_19,2,gerhard erasmus,milind kumar,4,10
+2_2025_19,2,john simpson,gerhard erasmus,47,22
+2_2025_19,2,milind kumar,ben charlesworth,8,12
+2_2025_19,2,milind kumar,gerhard erasmus,7,7
+2_2025_19,2,rashid khan,gerhard erasmus,0,1
+2_2025_2,1,mark watt,pawan sarraf,6,5
+2_2025_2,1,mark watt,priyank panchal,13,17
+2_2025_2,1,max o'dowd,priyank panchal,21,30
+2_2025_2,1,najibullah zadran,pawan sarraf,4,5
+2_2025_2,1,pawan sarraf,mark watt,10,11
+2_2025_2,1,pawan sarraf,najibullah zadran,22,5
+2_2025_2,1,priyank panchal,mark watt,50,25
+2_2025_2,1,priyank panchal,max o'dowd,40,23
+2_2025_2,2,arjun saud,ravi bopara,2,3
+2_2025_2,2,arjun saud,sohail tanvir,6,1
+2_2025_2,2,dawid malan,deepak bohara,7,7
+2_2025_2,2,deepak bohara,dawid malan,15,14
+2_2025_2,2,deepak bohara,dev khanal,5,2
+2_2025_2,2,deepak bohara,ravi bopara,23,21
+2_2025_2,2,dev khanal,deepak bohara,2,2
+2_2025_2,2,kushal malla,ravi bopara,20,15
+2_2025_2,2,ravi bopara,arjun saud,10,5
+2_2025_2,2,ravi bopara,deepak bohara,15,12
+2_2025_2,2,ravi bopara,kushal malla,14,10
+2_2025_2,2,ravi bopara,saif zaib,13,9
+2_2025_2,2,saif zaib,ravi bopara,39,16
+2_2025_20,1,amar routela,kushal malla,1,3
+2_2025_20,1,arjun saud,dawid malan,52,39
+2_2025_20,1,dawid malan,arjun saud,60,43
+2_2025_20,1,dawid malan,kushal malla,2,3
+2_2025_20,1,dawid malan,ravi bopara,12,6
+2_2025_20,1,dawid malan,saif zaib,7,3
+2_2025_20,1,kushal malla,amar routela,19,7
+2_2025_20,1,kushal malla,dawid malan,11,7
+2_2025_20,1,ravi bopara,dawid malan,3,5
+2_2025_20,1,saif zaib,dawid malan,9,6
+2_2025_20,2,aaditya mahata,sanjay krishnamurthi,19,7
+2_2025_20,2,aasif sheikh,maaz sadaqat,20,19
+2_2025_20,2,anil sah,jan nicol loftie-eaton,21,14
+2_2025_20,2,anil sah,maaz sadaqat,41,20
+2_2025_20,2,anil sah,sanjay krishnamurthi,0,2
+2_2025_20,2,jan nicol loftie-eaton,anil sah,11,9
+2_2025_20,2,maaz sadaqat,aasif sheikh,25,13
+2_2025_20,2,maaz sadaqat,anil sah,38,17
+2_2025_20,2,sanjay krishnamurthi,aaditya mahata,5,5
+2_2025_21,1,adam rossington,dhananjaya lakshan,17,9
+2_2025_21,1,adam rossington,jason roy,78,38
+2_2025_21,1,adam rossington,kushal bhurtel,16,12
+2_2025_21,1,dhananjaya lakshan,adam rossington,23,11
+2_2025_21,1,jason roy,adam rossington,49,37
+2_2025_21,1,kushal bhurtel,adam rossington,18,17
+2_2025_21,2,bipin sharma,nandan yadav,0,2
+2_2025_21,2,dipendra rawat,sompal kami,10,8
+2_2025_21,2,gulshan jha,najibullah zadran,9,7
+2_2025_21,2,jaykishan kolsawala,mark watt,7,10
+2_2025_21,2,mark watt,jaykishan kolsawala,36,16
+2_2025_21,2,mark watt,pawan sarraf,10,13
+2_2025_21,2,mark watt,priyank panchal,18,10
+2_2025_21,2,najibullah zadran,gulshan jha,15,7
+2_2025_21,2,najibullah zadran,pawan sarraf,5,6
+2_2025_21,2,najibullah zadran,sompal kami,4,2
+2_2025_21,2,nandan yadav,sompal kami,1,1
+2_2025_21,2,nandan yadav,unish singh,3,3
+2_2025_21,2,pawan sarraf,mark watt,8,5
+2_2025_21,2,pawan sarraf,najibullah zadran,11,9
+2_2025_21,2,priyank panchal,mark watt,16,11
+2_2025_21,2,sompal kami,dipendra rawat,3,5
+2_2025_21,2,sompal kami,najibullah zadran,6,2
+2_2025_21,2,sompal kami,nandan yadav,4,2
+2_2025_21,2,unish singh,nandan yadav,1,2
+2_2025_22,1,basir ahamad,marchant de lange,20,11
+2_2025_22,1,basir ahamad,pratish gc,9,8
+2_2025_22,1,basir ahamad,sam heazlett,1,1
+2_2025_22,1,faf du plessis,lokesh bam,12,9
+2_2025_22,1,george munsey,faf du plessis,0,2
+2_2025_22,1,lokesh bam,faf du plessis,3,7
+2_2025_22,1,lokesh bam,sam heazlett,35,38
+2_2025_22,1,marchant de lange,basir ahamad,10,8
+2_2025_22,1,narayan joshi,sam heazlett,5,7
+2_2025_22,1,pratish gc,basir ahamad,13,10
+2_2025_22,1,sahil patel,marchant de lange,3,3
+2_2025_22,1,sam heazlett,basir ahamad,0,1
+2_2025_22,1,sam heazlett,lokesh bam,20,17
+2_2025_22,1,sam heazlett,narayan joshi,7,2
+2_2025_22,1,sandeep lamichhane,marchant de lange,6,1
+2_2025_22,2,d'arcy short,niroshan dickwella,29,17
+2_2025_22,2,d'arcy short,sumit maharjan,18,15
+2_2025_22,2,d'arcy short,sundeep jora,13,13
+2_2025_22,2,dilip nath,niroshan dickwella,16,12
+2_2025_22,2,niroshan dickwella,d'arcy short,17,10
+2_2025_22,2,niroshan dickwella,dilip nath,15,14
+2_2025_22,2,niroshan dickwella,sher malla,1,1
+2_2025_22,2,rohit paudel,d'arcy short,0,3
+2_2025_22,2,sher malla,niroshan dickwella,1,1
+2_2025_22,2,sumit maharjan,d'arcy short,11,12
+2_2025_22,2,sundeep jora,d'arcy short,24,15
+2_2025_23,1,aakash tripathi,ben charlesworth,0,1
+2_2025_23,1,ben charlesworth,aakash tripathi,2,4
+2_2025_23,1,ben charlesworth,bhim sharki,23,15
+2_2025_23,1,ben charlesworth,john simpson,8,8
+2_2025_23,1,ben charlesworth,milind kumar,20,14
+2_2025_23,1,ben charlesworth,mohammad aadil alam,7,4
+2_2025_23,1,ben charlesworth,rashid khan,11,14
+2_2025_23,1,bhim sharki,ben charlesworth,53,21
+2_2025_23,1,bhim sharki,sunny patel,3,3
+2_2025_23,1,john simpson,ben charlesworth,2,4
+2_2025_23,1,karan kc,sunny patel,4,2
+2_2025_23,1,milind kumar,ben charlesworth,13,14
+2_2025_23,1,mohammad aadil alam,ben charlesworth,8,8
+2_2025_23,1,rashid khan,ben charlesworth,8,13
+2_2025_23,1,sunny patel,bhim sharki,3,2
+2_2025_23,2,aakash chand,sandeep chettri,0,1
+2_2025_23,2,adam rossington,kushal bhurtel,5,5
+2_2025_23,2,bipin khatri,sandeep chettri,0,1
+2_2025_23,2,dhananjaya lakshan,kushal bhurtel,2,4
+2_2025_23,2,dhananjaya lakshan,rishi dhawan,28,23
+2_2025_23,2,jason roy,kushal bhurtel,16,12
+2_2025_23,2,kiran thagunna,rishi dhawan,5,6
+2_2025_23,2,kushal bhurtel,adam rossington,2,3
+2_2025_23,2,kushal bhurtel,dhananjaya lakshan,9,6
+2_2025_23,2,kushal bhurtel,jason roy,5,8
+2_2025_23,2,kushal bhurtel,trit raj das,7,4
+2_2025_23,2,rishi dhawan,dhananjaya lakshan,48,25
+2_2025_23,2,rishi dhawan,kiran thagunna,2,2
+2_2025_23,2,rishi dhawan,sandeep chettri,6,6
+2_2025_23,2,sagar dhakal,sandeep chettri,6,3
+2_2025_23,2,sandeep chettri,rishi dhawan,2,4
+2_2025_23,2,trit raj das,kushal bhurtel,9,10
+2_2025_24,1,aarif sheikh,chris lynn,18,12
+2_2025_24,1,aarif sheikh,dipendra singh airee,6,4
+2_2025_24,1,binod bhandari,chris lynn,22,17
+2_2025_24,1,chris lynn,aarif sheikh,27,16
+2_2025_24,1,chris lynn,binod bhandari,24,18
+2_2025_24,1,chris lynn,harmeet singh,4,3
+2_2025_24,1,chris lynn,ishan pandey,2,2
+2_2025_24,1,chris lynn,puneet mehra,24,22
+2_2025_24,1,dipendra singh airee,aarif sheikh,26,15
+2_2025_24,1,harmeet singh,chris lynn,1,2
+2_2025_24,1,ishan pandey,chris lynn,1,4
+2_2025_24,1,puneet mehra,chris lynn,14,13
+2_2025_24,2,amar routela,dev khanal,9,6
+2_2025_24,2,arjun saud,dawid malan,11,5
+2_2025_24,2,arjun saud,saif zaib,5,10
+2_2025_24,2,dawid malan,arjun saud,6,9
+2_2025_24,2,dev khanal,amar routela,12,6
+2_2025_24,2,dev khanal,ravi bopara,16,13
+2_2025_24,2,george scrimshaw,amar routela,0,1
+2_2025_24,2,kamal singh airee,amar routela,0,1
+2_2025_24,2,kamal singh airee,ranjeet kumar,5,3
+2_2025_24,2,kamal singh airee,rijan dhakal,1,1
+2_2025_24,2,kushal malla,ravi bopara,16,15
+2_2025_24,2,ranjeet kumar,kamal singh airee,1,1
+2_2025_24,2,ravi bopara,dev khanal,17,13
+2_2025_24,2,ravi bopara,kushal malla,11,9
+2_2025_24,2,ravi bopara,saif zaib,1,1
+2_2025_24,2,rijan dhakal,kamal singh airee,2,2
+2_2025_24,2,saif zaib,arjun saud,1,2
+2_2025_24,2,saif zaib,ravi bopara,6,7
+2_2025_25,1,aasif sheikh,anil sah,13,12
+2_2025_25,1,aasif sheikh,sangeeth cooray,8,6
+2_2025_25,1,anil sah,aasif sheikh,7,10
+2_2025_25,1,jan nicol loftie-eaton,sangeeth cooray,0,1
+2_2025_25,1,maaz sadaqat,aasif sheikh,6,5
+2_2025_25,1,mayan yadav,sangeeth cooray,27,23
+2_2025_25,1,sangeeth cooray,aasif sheikh,1,1
+2_2025_25,1,sangeeth cooray,mayan yadav,22,16
+2_2025_25,1,sangeeth cooray,sanjay krishnamurthi,16,13
+2_2025_25,1,sangeeth cooray,shubh kansakar,7,8
+2_2025_25,1,sanjay krishnamurthi,sangeeth cooray,14,11
+2_2025_25,1,shubh kansakar,sangeeth cooray,11,15
+2_2025_25,2,d'arcy short,rohit paudel,31,24
+2_2025_25,2,dilip nath,jj smit,8,10
+2_2025_25,2,dilip nath,ruben trumpelmann,8,3
+2_2025_25,2,jj smit,dilip nath,5,6
+2_2025_25,2,jj smit,niroshan dickwella,16,13
+2_2025_25,2,niroshan dickwella,jj smit,8,7
+2_2025_25,2,niroshan dickwella,rohit paudel,11,14
+2_2025_25,2,rohit paudel,d'arcy short,30,22
+2_2025_25,2,rohit paudel,niroshan dickwella,12,13
+2_2025_25,2,ruben trumpelmann,dilip nath,7,5
+2_2025_25,2,sumit maharjan,d'arcy short,0,1
+2_2025_25,2,sundeep jora,niroshan dickwella,0,1
+2_2025_26,1,aarif sheikh,dipak bohara,1,2
+2_2025_26,1,aarif sheikh,dipendra singh airee,10,5
+2_2025_26,1,aarif sheikh,ishan pandey,36,26
+2_2025_26,1,binod bhandari,josh brown,15,13
+2_2025_26,1,dipak bohara,aarif sheikh,3,3
+2_2025_26,1,dipendra singh airee,aarif sheikh,19,11
+2_2025_26,1,harmeet singh,aarif sheikh,0,1
+2_2025_26,1,ishan pandey,aarif sheikh,36,26
+2_2025_26,1,ishan pandey,josh brown,3,10
+2_2025_26,1,josh brown,binod bhandari,10,9
+2_2025_26,1,josh brown,ishan pandey,14,16
+2_2025_26,2,basir ahamad,lokesh bam,2,3
+2_2025_26,2,basir ahamad,martin guptill,7,6
+2_2025_26,2,faf du plessis,sam heazlett,50,20
+2_2025_26,2,lokesh bam,basir ahamad,2,3
+2_2025_26,2,lokesh bam,pratish gc,1,1
+2_2025_26,2,martin guptill,basir ahamad,14,6
+2_2025_26,2,martin guptill,sam heazlett,8,3
+2_2025_26,2,pratish gc,lokesh bam,13,3
+2_2025_26,2,sam heazlett,faf du plessis,47,24
+2_2025_26,2,sam heazlett,martin guptill,6,4
+2_2025_27,1,alpesh ramjani,kamal singh airee,9,5
+2_2025_27,1,alpesh ramjani,kushal malla,24,17
+2_2025_27,1,arjun saud,dawid malan,1,2
+2_2025_27,1,dawid malan,arjun saud,5,6
+2_2025_27,1,dawid malan,ravi bopara,0,3
+2_2025_27,1,dev khanal,kushal malla,16,16
+2_2025_27,1,dev khanal,saif zaib,20,26
+2_2025_27,1,kamal singh airee,alpesh ramjani,2,3
+2_2025_27,1,kushal malla,alpesh ramjani,15,15
+2_2025_27,1,kushal malla,dev khanal,9,9
+2_2025_27,1,ravi bopara,dawid malan,1,1
+2_2025_27,1,ravi bopara,saif zaib,0,1
+2_2025_27,1,saif zaib,dev khanal,18,19
+2_2025_27,2,adam rossington,arjun kumal,65,47
+2_2025_27,2,arjun kumal,adam rossington,35,40
+2_2025_27,2,arjun kumal,jason roy,5,9
+2_2025_27,2,arjun kumal,kushal bhurtel,6,5
+2_2025_27,2,jason roy,arjun kumal,6,8
+2_2025_27,2,kushal bhurtel,arjun kumal,4,10
+2_2025_28,1,arjun gharti,najibullah zadran,4,3
+2_2025_28,1,dipendra rawat,sompal kami,2,2
+2_2025_28,1,gulshan jha,imran sheikh,19,20
+2_2025_28,1,imran sheikh,gulshan jha,15,14
+2_2025_28,1,imran sheikh,imran sheikh,0,2
+2_2025_28,1,imran sheikh,mark watt,5,8
+2_2025_28,1,imran sheikh,priyank panchal,1,1
+2_2025_28,1,imran sheikh,william bosisto,12,7
+2_2025_28,1,mark watt,imran sheikh,4,7
+2_2025_28,1,najibullah zadran,arjun gharti,2,3
+2_2025_28,1,najibullah zadran,pawan sarraf,6,3
+2_2025_28,1,najibullah zadran,sompal kami,8,6
+2_2025_28,1,najibullah zadran,william bosisto,1,2
+2_2025_28,1,pawan sarraf,najibullah zadran,1,2
+2_2025_28,1,priyank panchal,imran sheikh,16,18
+2_2025_28,1,sompal kami,dipendra rawat,4,5
+2_2025_28,1,sompal kami,najibullah zadran,14,6
+2_2025_28,1,william bosisto,imran sheikh,14,10
+2_2025_28,1,william bosisto,najibullah zadran,1,2
+2_2025_28,2,aaditya mahata,jan nicol loftie-eaton,1,1
+2_2025_28,2,aasif sheikh,maaz sadaqat,0,3
+2_2025_28,2,anil sah,maaz sadaqat,0,5
+2_2025_28,2,jan nicol loftie-eaton,aaditya mahata,9,4
+2_2025_28,2,jan nicol loftie-eaton,sanjay krishnamurthi,6,5
+2_2025_28,2,maaz sadaqat,aasif sheikh,5,7
+2_2025_28,2,maaz sadaqat,anil sah,7,3
+2_2025_28,2,maaz sadaqat,mayan yadav,1,5
+2_2025_28,2,maaz sadaqat,sanjay krishnamurthi,1,2
+2_2025_28,2,mayan yadav,maaz sadaqat,13,15
+2_2025_28,2,sangeeth cooray,sanjay krishnamurthi,27,33
+2_2025_28,2,sanjay krishnamurthi,jan nicol loftie-eaton,6,8
+2_2025_28,2,sanjay krishnamurthi,maaz sadaqat,2,3
+2_2025_28,2,sanjay krishnamurthi,sangeeth cooray,48,30
+2_2025_29,1,aarif sheikh,binod bhandari,19,10
+2_2025_29,1,aarif sheikh,scott kuggeleijn,1,3
+2_2025_29,1,binod bhandari,aarif sheikh,12,6
+2_2025_29,1,binod bhandari,dipendra singh airee,1,1
+2_2025_29,1,binod bhandari,harmeet singh,7,6
+2_2025_29,1,binod bhandari,ishan pandey,18,13
+2_2025_29,1,binod bhandari,mukhtar ahmed,10,7
+2_2025_29,1,binod bhandari,sheldon jackson,19,19
+2_2025_29,1,dipendra singh airee,binod bhandari,3,3
+2_2025_29,1,harmeet singh,binod bhandari,14,11
+2_2025_29,1,ishan pandey,binod bhandari,13,17
+2_2025_29,1,milan bohara,scott kuggeleijn,5,2
+2_2025_29,1,mukhtar ahmed,binod bhandari,11,11
+2_2025_29,1,scott kuggeleijn,aarif sheikh,1,1
+2_2025_29,1,sheldon jackson,binod bhandari,21,12
+2_2025_29,2,basir ahamad,faf du plessis,12,18
+2_2025_29,2,faf du plessis,basir ahamad,27,16
+2_2025_29,2,faf du plessis,lokesh bam,3,3
+2_2025_29,2,faf du plessis,martin guptill,1,3
+2_2025_29,2,faf du plessis,narayan joshi,2,2
+2_2025_29,2,faf du plessis,pratish gc,3,5
+2_2025_29,2,lokesh bam,faf du plessis,5,6
+2_2025_29,2,marchant de lange,pratish gc,7,4
+2_2025_29,2,marchant de lange,sandeep lamichhane,9,8
+2_2025_29,2,martin guptill,faf du plessis,2,2
+2_2025_29,2,narayan joshi,faf du plessis,1,3
+2_2025_29,2,naren bhatta,faf du plessis,0,1
+2_2025_29,2,pratish gc,faf du plessis,3,5
+2_2025_29,2,sam heazlett,faf du plessis,0,1
+2_2025_29,2,sandeep lamichhane,aakash tripathi,0,1
+2_2025_29,2,sandeep lamichhane,marchant de lange,3,4
+2_2025_29,2,surya tamang,sandeep lamichhane,0,4
+2_2025_3,1,basir ahamad,shubham ranjane,23,13
+2_2025_3,1,george munsey,lokesh bam,11,7
+2_2025_3,1,lokesh bam,george munsey,3,3
+2_2025_3,1,lokesh bam,martin guptill,70,42
+2_2025_3,1,lokesh bam,shubham ranjane,1,5
+2_2025_3,1,martin guptill,lokesh bam,62,35
+2_2025_3,1,narayan joshi,shubham ranjane,11,3
+2_2025_3,1,pratish gc,narayan joshi,0,1
+2_2025_3,1,shubham ranjane,basir ahamad,11,5
+2_2025_3,1,shubham ranjane,lokesh bam,10,5
+2_2025_3,1,shubham ranjane,narayan joshi,18,6
+2_2025_3,2,aakash chand,dan douthwaite,5,4
+2_2025_3,2,abhisekh tiwari,kushal bhurtel,12,10
+2_2025_3,2,adam rossington,dinesh kharel,4,4
+2_2025_3,2,adam rossington,kushal bhurtel,35,17
+2_2025_3,2,dan douthwaite,aakash chand,1,1
+2_2025_3,2,dan douthwaite,kushal bhurtel,1,2
+2_2025_3,2,dan douthwaite,matt taylor,8,10
+2_2025_3,2,dan douthwaite,sagar dhakal,19,7
+2_2025_3,2,dinesh kharel,adam rossington,8,7
+2_2025_3,2,james neesham,kushal bhurtel,0,1
+2_2025_3,2,kiran thagunna,kushal bhurtel,9,14
+2_2025_3,2,kushal bhurtel,abhisekh tiwari,6,8
+2_2025_3,2,kushal bhurtel,adam rossington,41,15
+2_2025_3,2,kushal bhurtel,dan douthwaite,7,3
+2_2025_3,2,kushal bhurtel,james neesham,1,1
+2_2025_3,2,kushal bhurtel,kiran thagunna,5,4
+2_2025_3,2,matt taylor,dan douthwaite,4,6
+2_2025_3,2,sagar dhakal,dan douthwaite,1,1
+2_2025_3,2,trit raj das,kushal bhurtel,0,2
+2_2025_30,1,aakash tripathi,ben charlesworth,1,5
+2_2025_30,1,ben charlesworth,aakash tripathi,3,2
+2_2025_30,1,ben charlesworth,bhim sharki,0,1
+2_2025_30,1,ben charlesworth,milind kumar,1,2
+2_2025_30,1,bhim sharki,ben charlesworth,0,1
+2_2025_30,1,bhim sharki,john simpson,17,15
+2_2025_30,1,john simpson,bhim sharki,19,15
+2_2025_30,1,john simpson,rashid khan,0,2
+2_2025_30,1,karan kc,santosh yadav,10,15
+2_2025_30,1,milind kumar,ben charlesworth,2,8
+2_2025_30,1,mohammad aadil alam,santosh yadav,18,11
+2_2025_30,1,rashid khan,john simpson,1,2
+2_2025_30,1,rashid khan,santosh yadav,1,7
+2_2025_30,1,santosh yadav,karan kc,8,7
+2_2025_30,1,santosh yadav,mohammad aadil alam,2,2
+2_2025_30,1,santosh yadav,rashid khan,0,1
+2_2025_30,1,santosh yadav,shahab alam,16,10
+2_2025_30,1,shahab alam,santosh yadav,5,8
+2_2025_30,1,sunny patel,ben charlesworth,7,6
+2_2025_30,2,d'arcy short,dinesh adhikari,13,11
+2_2025_30,2,d'arcy short,rohit paudel,10,13
+2_2025_30,2,d'arcy short,sundeep jora,11,11
+2_2025_30,2,dilip nath,niroshan dickwella,8,4
+2_2025_30,2,dinesh adhikari,d'arcy short,4,5
+2_2025_30,2,jj smit,ruben trumpelmann,1,1
+2_2025_30,2,niroshan dickwella,dilip nath,2,3
+2_2025_30,2,niroshan dickwella,jj smit,0,1
+2_2025_30,2,niroshan dickwella,sundeep jora,13,11
+2_2025_30,2,rohit paudel,d'arcy short,19,26
+2_2025_30,2,ruben trumpelmann,jj smit,5,2
+2_2025_30,2,sundeep jora,d'arcy short,10,10
+2_2025_30,2,sundeep jora,niroshan dickwella,16,15
+2_2025_31,1,abhishesh gautam,ruben trumpelmann,2,1
+2_2025_31,1,d'arcy short,dinesh adhikari,7,7
+2_2025_31,1,d'arcy short,niroshan dickwella,6,8
+2_2025_31,1,d'arcy short,rohit paudel,34,28
+2_2025_31,1,dilip nath,niroshan dickwella,1,2
+2_2025_31,1,dinesh adhikari,d'arcy short,1,5
+2_2025_31,1,jj smit,niroshan dickwella,0,2
+2_2025_31,1,niroshan dickwella,d'arcy short,7,7
+2_2025_31,1,niroshan dickwella,dilip nath,1,1
+2_2025_31,1,niroshan dickwella,jj smit,5,2
+2_2025_31,1,niroshan dickwella,ruben trumpelmann,9,8
+2_2025_31,1,niroshan dickwella,sundeep jora,7,4
+2_2025_31,1,rohit paudel,d'arcy short,35,31
+2_2025_31,1,ruben trumpelmann,niroshan dickwella,2,3
+2_2025_31,1,ruben trumpelmann,sher malla,10,6
+2_2025_31,1,sher malla,ruben trumpelmann,7,7
+2_2025_31,1,sundeep jora,niroshan dickwella,0,2
+2_2025_31,2,basir ahamad,marchant de lange,3,6
+2_2025_31,2,faf du plessis,martin guptill,2,2
+2_2025_31,2,faf du plessis,sam heazlett,1,2
+2_2025_31,2,lokesh bam,faf du plessis,0,1
+2_2025_31,2,marchant de lange,basir ahamad,3,5
+2_2025_31,2,marchant de lange,naren bhatta,2,3
+2_2025_31,2,marchant de lange,sam heazlett,11,10
+2_2025_31,2,marchant de lange,sandeep lamichhane,2,2
+2_2025_31,2,martin guptill,faf du plessis,2,3
+2_2025_31,2,naren bhatta,marchant de lange,3,6
+2_2025_31,2,naren bhatta,pratish gc,1,5
+2_2025_31,2,naren bhatta,subash bhandari,17,10
+2_2025_31,2,pratish gc,naren bhatta,2,3
+2_2025_31,2,sam heazlett,faf du plessis,1,1
+2_2025_31,2,sam heazlett,marchant de lange,17,11
+2_2025_31,2,sam heazlett,shankar rana,17,16
+2_2025_31,2,sandeep lamichhane,marchant de lange,3,4
+2_2025_31,2,shankar rana,sam heazlett,7,14
+2_2025_31,2,subash bhandari,naren bhatta,0,1
+2_2025_31,2,subash bhandari,pratish gc,0,2
+2_2025_32,1,aarif sheikh,ishan pandey,7,7
+2_2025_32,1,abinash bohara,hemant dhami,1,3
+2_2025_32,1,binod bhandari,ishan pandey,0,2
+2_2025_32,1,dipak bohara,ishan pandey,0,1
+2_2025_32,1,dipendra singh airee,ishan pandey,15,21
+2_2025_32,1,harmeet singh,ishan pandey,10,11
+2_2025_32,1,hemant dhami,abinash bohara,0,1
+2_2025_32,1,hemant dhami,scott kuggeleijn,7,8
+2_2025_32,1,ishan pandey,aarif sheikh,5,7
+2_2025_32,1,ishan pandey,binod bhandari,1,4
+2_2025_32,1,ishan pandey,dipendra singh airee,10,17
+2_2025_32,1,ishan pandey,harmeet singh,8,11
+2_2025_32,1,ishan pandey,scott kuggeleijn,5,7
+2_2025_32,1,ishan pandey,sheldon jackson,5,6
+2_2025_32,1,puneet mehra,ishan pandey,0,1
+2_2025_32,1,scott kuggeleijn,hemant dhami,6,4
+2_2025_32,1,scott kuggeleijn,ishan pandey,4,4
+2_2025_32,1,sheldon jackson,ishan pandey,1,3
+2_2025_32,2,d'arcy short,dinesh adhikari,15,13
+2_2025_32,2,dilip nath,niroshan dickwella,1,1
+2_2025_32,2,dinesh adhikari,d'arcy short,43,13
+2_2025_32,2,dinesh adhikari,niroshan dickwella,0,1
+2_2025_32,2,niroshan dickwella,dinesh adhikari,1,1
+2_2025_32,2,niroshan dickwella,rohit paudel,9,8
+2_2025_32,2,niroshan dickwella,sundeep jora,1,3
+2_2025_32,2,rohit paudel,niroshan dickwella,16,12
+2_2025_32,2,sundeep jora,niroshan dickwella,0,3
+2_2025_4,1,aarif sheikh,chris lynn,1,3
+2_2025_4,1,aarif sheikh,dipendra singh airee,13,11
+2_2025_4,1,aarif sheikh,ishan pandey,11,10
+2_2025_4,1,abinash bohara,hemant dhami,1,3
+2_2025_4,1,binod bhandari,chris lynn,0,2
+2_2025_4,1,chris lynn,aarif sheikh,2,8
+2_2025_4,1,chris lynn,binod bhandari,1,2
+2_2025_4,1,dipendra singh airee,aarif sheikh,12,11
+2_2025_4,1,dipendra singh airee,harmeet singh,14,9
+2_2025_4,1,dipendra singh airee,naren saud,13,10
+2_2025_4,1,harmeet singh,dipendra singh airee,47,16
+2_2025_4,1,harmeet singh,hemant dhami,4,2
+2_2025_4,1,harmeet singh,scott kuggeleijn,2,2
+2_2025_4,1,hemant dhami,abinash bohara,4,4
+2_2025_4,1,hemant dhami,harmeet singh,1,1
+2_2025_4,1,ishan pandey,aarif sheikh,12,9
+2_2025_4,1,josh brown,chris lynn,0,2
+2_2025_4,1,naren saud,dipendra singh airee,7,12
+2_2025_4,1,scott kuggeleijn,harmeet singh,2,4
+2_2025_4,2,aakash tripathi,ben charlesworth,9,4
+2_2025_4,2,aakash tripathi,bhim sharki,0,1
+2_2025_4,2,aakash tripathi,john simpson,25,18
+2_2025_4,2,aakash tripathi,milind kumar,2,4
+2_2025_4,2,aakash tripathi,santosh yadav,5,4
+2_2025_4,2,ben charlesworth,aakash tripathi,9,9
+2_2025_4,2,bhim sharki,aakash tripathi,15,13
+2_2025_4,2,john simpson,aakash tripathi,24,18
+2_2025_4,2,karan kc,sunny patel,1,2
+2_2025_4,2,milind kumar,aakash tripathi,6,3
+2_2025_4,2,milind kumar,rashid khan,5,11
+2_2025_4,2,mohammad aadil alam,milind kumar,0,1
+2_2025_4,2,rashid khan,milind kumar,5,5
+2_2025_4,2,rashid khan,sunny patel,1,3
+2_2025_4,2,santosh yadav,aakash tripathi,1,3
+2_2025_4,2,shahab alam,sunny patel,0,1
+2_2025_4,2,sunny patel,karan kc,1,1
+2_2025_4,2,sunny patel,rashid khan,3,1
+2_2025_4,2,sunny patel,shahab alam,6,5
+2_2025_5,1,arjun saud,ravi bopara,7,4
+2_2025_5,1,arjun saud,sohail tanvir,1,1
+2_2025_5,1,dawid malan,deepak bohara,0,1
+2_2025_5,1,deepak bohara,dawid malan,1,1
+2_2025_5,1,deepak bohara,dev khanal,11,11
+2_2025_5,1,dev khanal,deepak bohara,4,8
+2_2025_5,1,dev khanal,ravi bopara,11,12
+2_2025_5,1,kushal malla,ravi bopara,21,18
+2_2025_5,1,ravi bopara,arjun saud,1,3
+2_2025_5,1,ravi bopara,dev khanal,16,13
+2_2025_5,1,ravi bopara,kushal malla,23,29
+2_2025_5,1,ravi bopara,saif zaib,26,10
+2_2025_5,1,saif zaib,ravi bopara,15,7
+2_2025_5,1,sohail tanvir,arjun saud,5,3
+2_2025_5,2,d'arcy short,sundeep jora,11,6
+2_2025_5,2,dilip nath,rohit paudel,11,15
+2_2025_5,2,gulbadin naib,jj smit,1,2
+2_2025_5,2,gulbadin naib,rohit paudel,44,22
+2_2025_5,2,jj smit,gulbadin naib,4,4
+2_2025_5,2,rohit paudel,dilip nath,17,14
+2_2025_5,2,rohit paudel,gulbadin naib,18,20
+2_2025_5,2,rohit paudel,sundeep jora,5,10
+2_2025_5,2,sundeep jora,d'arcy short,13,6
+2_2025_5,2,sundeep jora,rohit paudel,22,14
+2_2025_6,1,aarif sheikh,ishan pandey,0,2
+2_2025_6,1,aarif sheikh,scott kuggeleijn,0,1
+2_2025_6,1,binod bhandari,chris lynn,1,2
+2_2025_6,1,binod bhandari,dipendra singh airee,7,9
+2_2025_6,1,binod bhandari,josh brown,35,32
+2_2025_6,1,binod bhandari,scott kuggeleijn,6,3
+2_2025_6,1,chris lynn,binod bhandari,33,14
+2_2025_6,1,dipendra singh airee,binod bhandari,15,10
+2_2025_6,1,harmeet singh,scott kuggeleijn,4,6
+2_2025_6,1,ishan pandey,aarif sheikh,7,6
+2_2025_6,1,josh brown,binod bhandari,73,36
+2_2025_6,1,naren saud,ishan pandey,4,1
+2_2025_6,1,scott kuggeleijn,aarif sheikh,6,4
+2_2025_6,1,scott kuggeleijn,harmeet singh,2,2
+2_2025_6,2,aakash chand,bipin khatri,1,1
+2_2025_6,2,abhisekh tiwari,dan douthwaite,0,2
+2_2025_6,2,abhisekh tiwari,kushal bhurtel,3,11
+2_2025_6,2,adam rossington,dinesh kharel,1,2
+2_2025_6,2,bipin khatri,dan douthwaite,8,8
+2_2025_6,2,dan douthwaite,abhisekh tiwari,8,4
+2_2025_6,2,dan douthwaite,bipin khatri,32,15
+2_2025_6,2,dinesh kharel,adam rossington,2,3
+2_2025_6,2,dinesh kharel,kushal bhurtel,5,6
+2_2025_6,2,james neesham,kushal bhurtel,47,25
+2_2025_6,2,kiran thagunna,kushal bhurtel,9,8
+2_2025_6,2,kushal bhurtel,abhisekh tiwari,10,3
+2_2025_6,2,kushal bhurtel,dinesh kharel,0,3
+2_2025_6,2,kushal bhurtel,james neesham,28,18
+2_2025_6,2,kushal bhurtel,kiran thagunna,3,4
+2_2025_6,2,kushal bhurtel,sumeet verma,12,4
+2_2025_6,2,sumeet verma,kushal bhurtel,6,7
+2_2025_7,1,d'arcy short,rohit paudel,19,13
+2_2025_7,1,d'arcy short,sundeep jora,0,1
+2_2025_7,1,dilip nath,rohit paudel,6,4
+2_2025_7,1,gulbadin naib,rohit paudel,7,9
+2_2025_7,1,jj smit,rohit paudel,26,13
+2_2025_7,1,jj smit,ruben trumpelmann,3,3
+2_2025_7,1,rohit paudel,d'arcy short,17,18
+2_2025_7,1,rohit paudel,dilip nath,3,4
+2_2025_7,1,rohit paudel,gulbadin naib,8,7
+2_2025_7,1,rohit paudel,jj smit,9,6
+2_2025_7,1,rohit paudel,sumit maharjan,13,8
+2_2025_7,1,ruben trumpelmann,jj smit,14,6
+2_2025_7,1,ruben trumpelmann,sameer ali,1,2
+2_2025_7,1,ruben trumpelmann,sher malla,17,6
+2_2025_7,1,sameer ali,ruben trumpelmann,1,2
+2_2025_7,1,sher malla,ruben trumpelmann,7,2
+2_2025_7,1,sumit maharjan,rohit paudel,4,10
+2_2025_7,1,sundeep jora,d'arcy short,1,8
+2_2025_7,2,mark watt,priyank panchal,26,14
+2_2025_7,2,mark watt,william bosisto,94,32
+2_2025_7,2,priyank panchal,mark watt,12,10
+2_2025_7,2,william bosisto,mark watt,29,20
+2_2025_8,1,aakash tripathi,ben charlesworth,0,5
+2_2025_8,1,ben charlesworth,gerhard erasmus,6,6
+2_2025_8,1,ben charlesworth,pratik shrestha,2,5
+2_2025_8,1,ben charlesworth,r vasconcelos,4,5
+2_2025_8,1,ben charlesworth,santosh yadav,20,17
+2_2025_8,1,gerhard erasmus,ben charlesworth,10,18
+2_2025_8,1,john simpson,mohammad aadil alam,7,5
+2_2025_8,1,mohammad aadil alam,john simpson,26,10
+2_2025_8,1,mohammad aadil alam,santosh yadav,25,17
+2_2025_8,1,pratik shrestha,ben charlesworth,4,8
+2_2025_8,1,r vasconcelos,ben charlesworth,3,4
+2_2025_8,1,santosh yadav,ben charlesworth,7,11
+2_2025_8,1,santosh yadav,mohammad aadil alam,20,14
+2_2025_8,2,basir ahamad,martin guptill,7,5
+2_2025_8,2,basir ahamad,naren bhatta,12,12
+2_2025_8,2,george munsey,lokesh bam,6,6
+2_2025_8,2,george munsey,martin guptill,30,10
+2_2025_8,2,lokesh bam,george munsey,15,11
+2_2025_8,2,martin guptill,basir ahamad,2,5
+2_2025_8,2,martin guptill,george munsey,23,14
+2_2025_8,2,naren bhatta,basir ahamad,4,8
+2_2025_8,2,naren bhatta,shubham ranjane,20,22
+2_2025_8,2,sandeep lamichhane,shubham ranjane,10,4
+2_2025_8,2,shubham ranjane,naren bhatta,6,8
+2_2025_9,1,basir ahamad,lokesh bam,3,6
+2_2025_9,1,basir ahamad,shubham ranjane,37,31
+2_2025_9,1,george munsey,lokesh bam,10,7
+2_2025_9,1,lokesh bam,basir ahamad,7,4
+2_2025_9,1,lokesh bam,george munsey,10,9
+2_2025_9,1,lokesh bam,martin guptill,12,14
+2_2025_9,1,marchant de lange,pratish gc,0,1
+2_2025_9,1,martin guptill,lokesh bam,13,15
+2_2025_9,1,narayan joshi,shubham ranjane,2,4
+2_2025_9,1,pratish gc,sandeep lamichhane,3,2
+2_2025_9,1,sandeep lamichhane,pratish gc,1,1
+2_2025_9,1,shubham ranjane,basir ahamad,15,21
+2_2025_9,1,shubham ranjane,marchant de lange,22,8
+2_2025_9,2,aaditya mahata,jan nicol loftie-eaton,2,4
+2_2025_9,2,aasif sheikh,lahiru milantha,13,11
+2_2025_9,2,anil sah,lahiru milantha,4,14
+2_2025_9,2,jan nicol loftie-eaton,aaditya mahata,0,2
+2_2025_9,2,jan nicol loftie-eaton,kishore mahato,4,3
+2_2025_9,2,jan nicol loftie-eaton,mayan yadav,9,9
+2_2025_9,2,jan nicol loftie-eaton,rupesh singh,25,10
+2_2025_9,2,jan nicol loftie-eaton,sanjay krishnamurthi,4,7
+2_2025_9,2,kishore mahato,jan nicol loftie-eaton,4,3
+2_2025_9,2,kishore mahato,lalit rajbanshi,0,2
+2_2025_9,2,lahiru milantha,aasif sheikh,6,5
+2_2025_9,2,lahiru milantha,anil sah,12,10
+2_2025_9,2,lahiru milantha,sanjay krishnamurthi,5,7
+2_2025_9,2,lalit rajbanshi,kishore mahato,5,3
+2_2025_9,2,mayan yadav,jan nicol loftie-eaton,4,9
+2_2025_9,2,rupesh singh,jan nicol loftie-eaton,9,11
+2_2025_9,2,sangeeth cooray,jan nicol loftie-eaton,0,1
+2_2025_9,2,sanjay krishnamurthi,jan nicol loftie-eaton,14,9
+2_2025_9,2,sanjay krishnamurthi,lahiru milantha,6,3

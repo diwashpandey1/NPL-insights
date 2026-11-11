@@ -1,0 +1,14 @@
+check,count,interpretation
+delivery_rows,14924,informational
+match_rows,64,informational
+missing_player_out,14028,expected for non-wickets
+repeated_match_inning_ball_over_notation_rows,909,not a duplicate test: ball_over repeats for illegal deliveries; no unique delivery sequence field
+exact_duplicate_rows_after_first,21,identical source rows; possible repeated over-ball notation means cannot safely deduplicate
+total_runs_vs_components_mismatch,0,must investigate
+extra_runs_vs_categories_mismatch,0,must investigate
+ball_match_ids_without_match_metadata,0,crosswalk requires two innings plus unique team/score evidence
+conflicting_duplicate_match_keys,2,two 2025 records share one ID; team/innings totals resolve their ball-feed mapping
+match_score_reconciliation_mismatches,1,one-run discrepancy in 2024 local match 21; 2025 ID collision mapped by team and innings totals
+match_team_name_reconciliation_mismatches,7,Kathmandu Gorkhas/Gurkhas source spelling; matching alias does not rewrite source values
+dismissing_rows_without_kind,0,fielding/wicket attribution limited
+multi_fielder_dismissal_rows,43,individual credit ambiguous

@@ -1,0 +1,9 @@
+# Dataset paths are relative to the ML project root. Adjust for the local checkout.
+dataset:
+  ball_by_ball_path: "../NPL - Stats Processing/data/processed/combined/merged_npl_2024_2025.csv"
+  matches_path: "../NPL - Stats Processing/data/raw/source/csv_data/NPL-matches.csv"
+
+# Reserved for future choices; no model or training approach has been selected.
+model: {}
+training: {}
+evaluation: {}

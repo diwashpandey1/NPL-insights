@@ -1,0 +1,26 @@
+bowler,match_id,season,inning,bowling_team,batting_team,runs_conceded,legal_balls,wickets,wides,wide_runs,no_balls,no_ball_runs,fours_conceded,sixes_conceded,dots,extras,economy,bowling_average,bowling_strike_rate,overs_display
+harmeet singh,1_2024_18,2024,2,sudurpaschim royals,janakpur bolts,2,24,2,1,1,0,0,0,0,22,5,0.5,1.0,12.0,4.0
+abinash bohara,2_2025_32,2025,2,sudurpaschim royals,lumbini lions,1,6,1,0,0,0,0,0,0,5,0,1.0,1.0,6.0,1.0
+ruben trumpelmann,2_2025_32,2025,1,lumbini lions,sudurpaschim royals,3,13,3,0,0,0,0,0,0,10,0,1.38,1.0,4.33,2.1
+dipesh kandel,1_2024_19,2024,2,kathmandu gurkhas,lumbini lions,6,24,3,0,0,0,0,0,0,18,0,1.5,2.0,8.0,4.0
+gerhard erasmus,2_2025_15,2025,2,kathmandu gorkhas,chitwan rhinos,2,6,0,0,0,0,0,0,0,4,0,2.0,,,1.0
+lalit rajbanshi,1_2024_21,2024,1,janakpur bolts,kathmandu gurkhas,8,24,3,0,0,0,0,0,0,21,0,2.0,2.67,8.0,4.0
+saif zaib,1_2024_18,2024,2,sudurpaschim royals,janakpur bolts,2,6,1,0,0,0,0,0,0,4,0,2.0,2.0,6.0,1.0
+sohail tanvir,1_2024_5,2024,2,chitwan rhinos,pokhara avengers,6,18,3,0,0,0,0,1,0,15,0,2.0,2.0,6.0,3.0
+mark watt,2_2025_28,2025,2,karnali yaks,janakpur bolts,9,24,1,0,0,0,0,1,0,16,2,2.25,9.0,24.0,4.0
+rashid khan,2_2025_15,2025,2,kathmandu gorkhas,chitwan rhinos,3,8,3,0,0,0,0,0,0,4,1,2.25,1.0,2.67,1.2
+scott kuggeleijn,2_2025_10,2025,2,sudurpaschim royals,karnali yaks,9,24,1,1,1,0,0,0,0,16,2,2.25,9.0,24.0,4.0
+naren saud,1_2024_18,2024,2,sudurpaschim royals,janakpur bolts,5,12,1,0,0,0,0,1,0,10,0,2.5,5.0,12.0,2.0
+shahab alam,1_2024_19,2024,2,kathmandu gurkhas,lumbini lions,10,24,0,0,0,0,0,0,0,16,0,2.5,,,4.0
+brandon mcmullen,1_2024_4,2024,2,sudurpaschim royals,biratnagar kings,8,18,1,0,0,0,0,1,0,13,0,2.67,8.0,18.0,3.0
+abhishek gautam,1_2024_22,2024,1,lumbini lions,karnali yaks,11,24,0,0,0,0,0,1,0,14,2,2.75,,,4.0
+lalit rajbanshi,1_2024_25,2024,1,janakpur bolts,chitwan rhinos,11,24,2,0,0,0,0,1,0,16,1,2.75,5.5,12.0,4.0
+sandeep lamichhane,2_2025_9,2025,2,biratnagar kings,janakpur bolts,11,24,4,1,1,0,0,0,0,15,1,2.75,2.75,6.0,4.0
+zeeshan maqsood,1_2024_17,2024,1,karnali yaks,pokhara avengers,11,24,0,0,0,0,0,0,0,16,0,2.75,,,4.0
+brandon mcmullen,1_2024_28,2024,1,sudurpaschim royals,karnali yaks,6,12,0,0,0,0,0,0,0,6,0,3.0,,,2.0
+dipendra singh airee,2_2025_24,2025,2,sudurpaschim royals,chitwan rhinos,9,18,1,0,0,0,0,1,0,12,0,3.0,9.0,18.0,3.0
+harsh thaker,1_2024_18,2024,1,janakpur bolts,sudurpaschim royals,9,18,1,0,0,0,0,0,0,11,0,3.0,9.0,18.0,3.0
+mayan yadav,2_2025_25,2025,2,janakpur bolts,lumbini lions,3,6,2,0,0,0,0,0,0,3,0,3.0,1.5,3.0,1.0
+rashid khan,1_2024_2,2024,2,kathmandu gurkhas,chitwan rhinos,3,6,0,0,0,0,0,0,0,1,5,3.0,,,1.0
+rishi dhawan,2_2025_27,2025,1,pokhara avengers,chitwan rhinos,6,12,0,0,0,0,0,0,0,7,0,3.0,,,2.0
+rohit paudel,1_2024_22,2024,1,lumbini lions,karnali yaks,6,12,1,0,0,0,0,0,0,6,2,3.0,6.0,12.0,2.0
