@@ -30,6 +30,15 @@ Apply the timestamped files in filename order:
    RPCs for season/team-alias ensure, source-file hash reconciliation, atomic
    match/source-key persistence, and atomic innings/delivery/dismissal/fielder
    batches.
+8. `migrations/20261111160000_ingestion_advisory_locks.sql` — initial
+   transaction-scoped lock implementation; retained as migration history and
+   superseded by the later forward migrations.
+9. `migrations/20261111170000_ingestion_concurrent_lock.sql` — replaces the
+   initial acquisition RPC but still protects only its transaction; its
+   obsolete advisory-lock helpers are removed by the lease migration.
+10. `migrations/20261111194019_ingestion_run_leases.sql` — durable per-source
+    leases, heartbeat renewal, source-scoped expiry recovery, fencing triggers,
+    immutable per-run source-file provenance, and service-role-only functions.
 
 Migrations are tracked by Supabase's migration history. Do not edit an
 already-applied migration; create a new migration for subsequent schema
@@ -54,23 +63,26 @@ or link a hosted Supabase project.
 
 ## Local development and applying migrations
 
-From `NPL-Backend/`, start the local stack and apply the migration history:
+From `NPL-Backend/`, start the local stack if needed, then apply pending
+migrations without resetting existing local data:
 
 ```sh
 supabase start
-supabase db reset
+supabase migration up
 supabase migration list
+supabase db lint
 ```
 
-`supabase db reset` resets the local database before applying migrations. Do
-not use it if the local Supabase database contains data you need to keep.
+`supabase db reset` is destructive. Do not use it unless you have confirmed
+that the local database contains no user data that must be preserved.
 Seeding is disabled; there is no `seed.sql` and no fabricated cricket data.
 Use `supabase status` to view local service URLs and connection information.
 
-The migrations, including the ingestion RPCs, have not been applied or
-executed in this workspace: Docker was not available during implementation.
-No hosted project was linked or modified. Backend unit tests use mocks and do
-not verify SQL compilation, grants, or behavior against PostgreSQL.
+All ten migrations have been applied and exercised against the local stack in
+this workspace. No hosted project was linked or modified. The forward lease
+migration preserves the previous 16 canonical tables and adds one private
+operational table, `ingestion_run_leases`, bringing the public table count to
+17.
 Local `auto_expose_new_tables` is disabled in `config.toml`, so future local
 tables require explicit grants. This local setting does not change a hosted
 project's Data API defaults; review those separately before deployment.
@@ -119,6 +131,7 @@ WHERE n.nspname = 'public'
     'seasons', 'teams', 'team_aliases', 'players', 'player_aliases',
     'player_season_teams', 'matches', 'match_source_keys', 'match_innings',
     'deliveries', 'dismissals', 'dismissal_fielders', 'ingestion_runs',
+    'ingestion_run_leases',
     'source_files', 'ingestion_issues', 'team_standings_snapshots'
   )
 ORDER BY c.relname;
@@ -130,6 +143,7 @@ WHERE schemaname = 'public'
     'seasons', 'teams', 'team_aliases', 'players', 'player_aliases',
     'player_season_teams', 'matches', 'match_source_keys', 'match_innings',
     'deliveries', 'dismissals', 'dismissal_fielders', 'ingestion_runs',
+    'ingestion_run_leases',
     'source_files', 'ingestion_issues', 'team_standings_snapshots'
   )
 ORDER BY tablename, policyname;
@@ -146,6 +160,7 @@ WHERE schemaname = 'public'
     'seasons', 'teams', 'team_aliases', 'players', 'player_aliases',
     'player_season_teams', 'matches', 'match_source_keys', 'match_innings',
     'deliveries', 'dismissals', 'dismissal_fielders', 'ingestion_runs',
+    'ingestion_run_leases',
     'source_files', 'ingestion_issues', 'team_standings_snapshots'
   )
 ORDER BY tablename, indexname;
@@ -173,6 +188,7 @@ FROM unnest(ARRAY[
   'seasons', 'teams', 'team_aliases', 'players', 'player_aliases',
   'player_season_teams', 'matches', 'match_source_keys', 'match_innings',
   'deliveries', 'dismissals', 'dismissal_fielders', 'ingestion_runs',
+  'ingestion_run_leases',
   'source_files', 'ingestion_issues', 'team_standings_snapshots'
 ]) AS names(table_name)
 ORDER BY table_name;
@@ -190,7 +206,7 @@ FROM unnest(ARRAY[
 ORDER BY sequence_name;
 ```
 
-Expect all 16 tables to have RLS enabled and no policies. The constraint and
+Expect all 17 tables to have RLS enabled and no policies. The constraint and
 index queries should include the declared keys, checks, foreign keys, and
 analytics/provenance indexes. Normal `anon` and `authenticated` roles should
 have no table or identity-sequence privileges; `service_role` has access for
@@ -217,8 +233,27 @@ execute grants only to `service_role`; they do not expose elevated SQL to
 `anon` or `authenticated`. Atomicity of match/source-key and delivery/innings/
 dismissal/fielder writes is provided by each RPC call's single PostgreSQL
 statement transaction. Team-alias and season ensure operations are also
-single-call RPCs. The delivery-source crosswalk is a separate REST statement,
-but dependent delivery batches are not submitted if that mapping fails.
+single-call RPCs. The whole ingestion run is not one database transaction:
+atomicity is per RPC/batch. The delivery-source crosswalk is a separate REST
+statement, but dependent delivery batches are not submitted if that mapping
+fails.
+
+The final migration uses a primary key on
+`(source_system, logical_path)` and a unique run/token association in
+`ingestion_run_leases`. Acquisition is atomic; the lease survives the RPC
+transaction, and the worker renews it periodically. Completion and failure
+finalize the run and delete its lease atomically. Recovery takes an explicit
+source system and logical path and expires only rows whose `expires_at` has
+passed. Token checks plus source-file/run fencing triggers prevent a recovered
+worker from continuing canonical writes. The earlier acquisition migrations
+used transaction locks and run age; those functions are dropped/replaced by
+the forward lease migration.
+
+No stable delivery identifier is present in the inspected CSV columns.
+`ball_over` repeats for wides/no-balls and source row order is only a locator,
+not proof that a corrected row is the same delivery. Therefore changed
+delivery-file hashes are recorded as a blocking issue and are not written to
+canonical deliveries; a reviewed correction workflow is not implemented.
 
 ## Future migration changes
 
@@ -226,8 +261,9 @@ but dependent delivery batches are not submitted if that mapping fails.
 2. Generate a sequential file with `supabase migration new <description>`.
 3. Write explicit SQL and review key dependencies, constraints, indexes,
    grants, and RLS behavior.
-4. Apply to a disposable local stack with `supabase db reset`; inspect the
-   resulting catalog and run relevant backend checks.
+4. Apply with `supabase migration up` on the local stack, preserving existing
+   data; use `supabase db reset` only after confirming that no local user data
+   needs to be retained. Inspect the catalog and run relevant backend checks.
 5. Review the remote dry run and obtain approval before hosted deployment.
 6. Never rewrite a migration already applied to a shared or hosted database;
    add a forward migration instead.

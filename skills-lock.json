@@ -1,17 +1,23 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
+    "data-quality-audit": {
+      "source": "nimrodfisher/data-analytics-skills",
+      "sourceType": "github",
+      "skillPath": "01-data-quality-validation/data-quality-audit/SKILL.md",
+      "computedHash": "9a161b14214c5364c0927108f618321c8127c24a5ea5321e1f8f640a49ec9acf"
+    },
     "supabase": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/supabase/SKILL.md",
-      "computedHash": "af1844ade632808fc0c15cf2db87daf3b2431c5262dc8a0c3ea7d70880fadf91"
+      "computedHash": "2fbff32fd63b7d31585cacf0ed43e5bf8d05dd20d6c0c751d256cb967a00eec1"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "skillPath": "skills/supabase-postgres-best-practices/SKILL.md",
-      "computedHash": "128fac78002d916c8ca908245d398e634f540d8bcf20915b2b2359aeb18eba59"
+      "computedHash": "3eb972c2d7c818e544e35cc33ea8d7147d4d78ae08142ef40037b0fbac7a2505"
     }
   }
 }

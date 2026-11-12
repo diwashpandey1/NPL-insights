@@ -76,6 +76,7 @@ function createMockRepository(state: MockRepositoryState): IngestionRepository {
   return {
     isAvailable: () => true,
     createIngestionRun: async () => ({ id: `run-${++state.runCount}` }),
+    renewIngestionRunLease: async () => {},
     registerSourceFile: async (input): Promise<SourceFileRegistration> => {
       const key = `${input.sourceSystem}\u001f${input.logicalPath}`;
       const existing = state.sourceFiles.get(key);
@@ -366,22 +367,31 @@ test('unchanged source files skip after successful processing without inserting 
   }
 });
 
-test('changed delivery file reuses resolved matches and reports updated source provenance', async () => {
+test('changed delivery files are blocked when row identity cannot be reconciled', async () => {
   const fixture = await createFixture();
   const state = createState();
   const repository = createMockRepository(state);
+  const registerSourceFile = repository.registerSourceFile.bind(repository);
+  repository.registerSourceFile = async (input) => {
+    const registration = await registerSourceFile(input);
+    if (input.sourceSystem === 'npl-master') {
+      return {
+        ...registration,
+        previousSourceSha256: 'a'.repeat(64),
+        previousSourceRowCount: input.rowCount,
+      };
+    }
+    return registration;
+  };
   try {
-    const first = await runSeasonIngestion('2024', { repository, dataPaths: fixture.dataPaths });
-    assert.equal(first.successfullyInserted, 3);
-
-    await fs.appendFile(fixture.dataPaths.ballByBallCsv, '\n', 'utf8');
-    const second = await runSeasonIngestion('2024', { repository, dataPaths: fixture.dataPaths });
-    assert.equal(second.updatedRecords, 2);
-    assert.equal(second.skippedRecords, 1);
-    assert.equal(second.failedRecords, 0);
-    assert.equal(state.matchAttempts, 1);
-    assert.equal(state.deliveryAttempts, 2);
-    assert.equal(state.deliveries.size, 2);
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths }),
+      /no reviewed stable delivery identifier/,
+    );
+    assert.equal(state.matchAttempts, 0);
+    assert.equal(state.deliveryAttempts, 0);
+    assert.ok(state.issues.some((issue) => issue.code === 'delivery:source-identity-ambiguous'));
+    assert.equal(state.failedRunFinalizations, 1);
   } finally {
     await fixture.cleanup();
   }
@@ -407,7 +417,7 @@ test('changed delivery files with removed source rows are blocked before canonic
   try {
     await assert.rejects(
       () => runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths }),
-      /Deletion reconciliation is not implemented; refusing to persist this file/,
+      /no reviewed stable delivery identifier/,
     );
     assert.equal(state.matchAttempts, 0);
     assert.equal(state.deliveryAttempts, 0);
@@ -417,35 +427,43 @@ test('changed delivery files with removed source rows are blocked before canonic
   }
 });
 
-test('same-count delivery file swap is blocked and no canonical writes are made', async () => {
-  // Known limitation: without a stable per-row identifier, same-count changed content
-  // is allowed through the pipeline. The guard only blocks count-decreasing changes.
-  // This test verifies the pipeline proceeds (not blocked) when the row count stays
-  // the same but the SHA256 differs, and that deliveries are updated in place.
+test('same-count delivery swap is blocked and leaves canonical records unchanged', async () => {
   const fixture = await createFixture();
   const state = createState();
   const repository = createMockRepository(state);
   const registerSourceFile = repository.registerSourceFile.bind(repository);
-  repository.registerSourceFile = async (input) => {
-    const registration = await registerSourceFile(input);
-    if (input.sourceSystem === 'npl-master') {
-      return {
-        ...registration,
-        // Different SHA but SAME row count — the ambiguous same-count swap scenario.
-        // Pipeline allows this through; deliveries are reconciled by sequence position.
-        previousSourceSha256: 'a'.repeat(64),
-        previousSourceRowCount: input.rowCount,
-      };
-    }
-    return registration;
-  };
-
   try {
-    // Same-count changed content must be allowed through (not rejected).
-    const report = await runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths });
-    // Run must succeed — not throw or fail
-    assert.equal(state.failedRunFinalizations, 0, 'run must not fail for same-count changed content');
-    assert.equal(report.fatalErrors, 0);
+    const first = await runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths });
+    assert.equal(first.successfullyInserted, 3);
+    const deliveriesBefore = [...state.deliveries];
+    const sourceProvenanceBefore = [...state.deliverySourceFiles.entries()];
+    const matchesBefore = [...state.matches.entries()];
+    repository.registerSourceFile = async (input) => {
+      const registration = await registerSourceFile(input);
+      if (input.sourceSystem === 'npl-master') {
+        return {
+          ...registration,
+          previousSourceSha256: 'a'.repeat(64),
+          previousSourceRowCount: input.rowCount,
+        };
+      }
+      return registration;
+    };
+    const changedCsv = (await fs.readFile(fixture.dataPaths.ballByBallCsv, 'utf8'))
+      .replace('Unlisted Batter', 'Replacement Batter');
+    await fs.writeFile(fixture.dataPaths.ballByBallCsv, changedCsv, 'utf8');
+
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: fixture.dataPaths }),
+      /same row count.*no reviewed stable delivery identifier/,
+    );
+    assert.deepEqual([...state.deliveries], deliveriesBefore);
+    assert.deepEqual([...state.deliverySourceFiles.entries()], sourceProvenanceBefore);
+    assert.deepEqual([...state.matches.entries()], matchesBefore);
+    assert.equal(state.deliveryAttempts, 1);
+    assert.equal(state.failedRunFinalizations, 1);
+    assert.ok(state.issues.some((issue) => issue.severity === 'blocking'
+      && issue.code === 'delivery:source-identity-ambiguous'));
   } finally {
     await fixture.cleanup();
   }
@@ -655,12 +673,15 @@ test('source-file reconciliation sends stable path and hash and returns the prev
   repository.client = {
     from: (table: string) => queryFor(table),
     rpc: async (name: string, args: Record<string, unknown>) => {
+      if (name === 'ingestion_acquire_run_lock') {
+        return { data: { id: 'run-id', lease_token: 'lease-token' }, error: null };
+      }
       calledFunction = name;
       rpcArgs = args;
       return {
         data: {
           id: 'source-file-id',
-          outcome: 'updated',
+          outcome: 'inserted',
           previousRunStatus: 'completed_with_errors',
           previousSummary: { processedSeasons: ['2024/25'] },
         },
@@ -669,6 +690,12 @@ test('source-file reconciliation sends stable path and hash and returns the prev
     },
   } as unknown as NonNullable<typeof repository.client>;
 
+  await repository.createIngestionRun({
+    pipelineVersion: 'test',
+    sourceSet: 'test',
+    sourceSystem: 'npl-master',
+    logicalPath: 'data/processed/source.csv',
+  });
   const result = await repository.registerSourceFile({
     ingestionRunId: 'run-id',
     sourceSystem: 'npl-master',
@@ -681,6 +708,7 @@ test('source-file reconciliation sends stable path and hash and returns the prev
   assert.equal(calledFunction, 'ingestion_register_source_file');
   assert.equal(rpcArgs.p_logical_path, 'data/processed/source.csv');
   assert.equal(rpcArgs.p_content_sha256, 'a'.repeat(64));
+  assert.equal(rpcArgs.p_lease_token, 'lease-token');
   assert.equal(result.id, 'source-file-id');
   assert.equal(result.previousRunStatus, 'completed_with_errors');
   assert.deepEqual(result.previousSummary, { processedSeasons: ['2024/25'] });
@@ -691,10 +719,18 @@ test('source-file reconciliation sends stable path and hash and returns the prev
 test('repository surfaces team alias RPC errors instead of hiding partial writes', async () => {
   const repository = new SupabaseIngestionRepository();
   repository.client = {
-    rpc: async () => ({ data: null, error: { message: 'alias unique constraint failed' } }),
+    rpc: async (name: string) => name === 'ingestion_acquire_run_lock'
+      ? { data: { id: 'run-id', lease_token: 'lease-token' }, error: null }
+      : { data: null, error: { message: 'alias unique constraint failed' } },
   } as unknown as NonNullable<typeof repository.client>;
+  await repository.createIngestionRun({
+    pipelineVersion: 'test',
+    sourceSet: 'test',
+    sourceSystem: 'npl-master',
+    logicalPath: 'test/source.csv',
+  });
   await assert.rejects(
-    () => repository.ensureTeam('Gurkhas', 'npl-master'),
+    () => repository.ensureTeam('Gurkhas', 'npl-master', 'run-id'),
     /alias unique constraint failed/,
   );
 });
@@ -702,13 +738,21 @@ test('repository surfaces team alias RPC errors instead of hiding partial writes
 test('repository accepts a rejected team alias result without a canonical id', async () => {
   const repository = new SupabaseIngestionRepository();
   repository.client = {
-    rpc: async () => ({
-      data: { outcome: 'rejected', reason: 'The canonical team key and name refer to different existing teams.' },
-      error: null,
-    }),
+    rpc: async (name: string) => name === 'ingestion_acquire_run_lock'
+      ? { data: { id: 'run-id', lease_token: 'lease-token' }, error: null }
+      : {
+        data: { outcome: 'rejected', reason: 'The canonical team key and name refer to different existing teams.' },
+        error: null,
+      },
   } as unknown as NonNullable<typeof repository.client>;
+  await repository.createIngestionRun({
+    pipelineVersion: 'test',
+    sourceSet: 'test',
+    sourceSystem: 'npl-master',
+    logicalPath: 'test/source.csv',
+  });
 
-  assert.deepEqual(await repository.ensureTeam('Gurkhas', 'npl-master'), {
+  assert.deepEqual(await repository.ensureTeam('Gurkhas', 'npl-master', 'run-id'), {
     outcome: 'rejected',
     reason: 'The canonical team key and name refer to different existing teams.',
   });

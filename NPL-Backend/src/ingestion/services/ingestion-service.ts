@@ -9,9 +9,7 @@ const DELIVERY_BATCH_SIZE = 250;
 const MATCH_SOURCE_SYSTEM = 'npl-match-feed';
 const DELIVERY_SOURCE_SYSTEM = 'npl-master';
 const INGESTION_PIPELINE_VERSION = 'phase-2-final-integrity-audit-v1';
-
-/** Minutes after which a 'running' ingestion run is considered abandoned. */
-const STALE_RUN_THRESHOLD_MINUTES = 60;
+const DEFAULT_LEASE_DURATION_SECONDS = 300;
 
 export interface IngestionDataPaths {
   ballByBallCsv: string;
@@ -22,6 +20,8 @@ export interface IngestionServiceOptions {
   dryRun?: boolean;
   repository?: IngestionRepository;
   dataPaths?: IngestionDataPaths;
+  leaseDurationSeconds?: number;
+  heartbeatIntervalMs?: number;
 }
 
 interface SequencedDelivery {
@@ -142,6 +142,17 @@ export async function runSeasonIngestion(
   let unresolvedTeams = 0;
   let unresolvedPlayers = 0;
   let ingestionRunId: string | null = null;
+  let heartbeatTimer: NodeJS.Timeout | null = null;
+  let heartbeatTask: Promise<void> = Promise.resolve();
+  let heartbeatError: Error | null = null;
+  const leaseDurationSeconds = options.leaseDurationSeconds ?? DEFAULT_LEASE_DURATION_SECONDS;
+  const heartbeatIntervalMs = options.heartbeatIntervalMs
+    ?? Math.max(50, Math.floor(leaseDurationSeconds * 1000 / 3));
+  if (!Number.isSafeInteger(leaseDurationSeconds) || leaseDurationSeconds <= 0
+    || !Number.isSafeInteger(heartbeatIntervalMs) || heartbeatIntervalMs <= 0
+    || heartbeatIntervalMs >= leaseDurationSeconds * 1000) {
+    throw new Error('Ingestion lease duration and heartbeat interval must be positive, with the heartbeat shorter than the lease.');
+  }
   const counters = (): Record<string, number> => ({
     rowsRead: rawDeliveryRows.length + rawMatchRows.length,
     rowsInserted: inserted,
@@ -174,17 +185,27 @@ export async function runSeasonIngestion(
     const ingestionRun = await repository.createIngestionRun({
       pipelineVersion: INGESTION_PIPELINE_VERSION,
       sourceSet: seasonSelection,
-      // Pass the delivery source path so the repository can atomically check for
-      // concurrent runs and refuse to create a new one if another is already running.
       sourceSystem: DELIVERY_SOURCE_SYSTEM,
       logicalPath: logicalSourcePath(dataPaths.ballByBallCsv),
-      staleThresholdMinutes: STALE_RUN_THRESHOLD_MINUTES,
+      leaseDurationSeconds,
     });
     ingestionRunId = ingestionRun.id;
+    const runId = ingestionRun.id;
+    heartbeatTimer = setInterval(() => {
+      heartbeatTask = heartbeatTask.then(async () => {
+        if (heartbeatError) return;
+        try {
+          await repository.renewIngestionRunLease(runId);
+        } catch (error) {
+          heartbeatError = new Error(`Ingestion lease heartbeat failed: ${errorMessage(error)}`);
+          if (heartbeatTimer) clearInterval(heartbeatTimer);
+        }
+      });
+    }, heartbeatIntervalMs);
 
     const [deliverySourceFile, matchSourceFile] = await Promise.all([
       repository.registerSourceFile({
-        ingestionRunId,
+        ingestionRunId: runId,
         sourceSystem: DELIVERY_SOURCE_SYSTEM,
         logicalPath: logicalSourcePath(dataPaths.ballByBallCsv),
         contentSha256: inspected.files[0]!.sha256,
@@ -193,7 +214,7 @@ export async function runSeasonIngestion(
         rowCount: inspected.files[0]!.rowCount,
       }),
       repository.registerSourceFile({
-        ingestionRunId,
+        ingestionRunId: runId,
         sourceSystem: MATCH_SOURCE_SYSTEM,
         logicalPath: logicalSourcePath(dataPaths.matchCsv),
         contentSha256: inspected.files[1]!.sha256,
@@ -205,21 +226,27 @@ export async function runSeasonIngestion(
 
     const previousDeliveryRowCount = deliverySourceFile.previousSourceRowCount;
     if (deliverySourceFile.previousSourceSha256
-      && deliverySourceFile.previousSourceSha256 !== inspected.files[0]!.sha256
-      && previousDeliveryRowCount !== null
-      && previousDeliveryRowCount !== undefined
-      && inspected.files[0]!.rowCount < previousDeliveryRowCount) {
-      throw new Error(
-        `Changed delivery source ${logicalSourcePath(dataPaths.ballByBallCsv)} has fewer rows `
-        + `(${inspected.files[0]!.rowCount}) than its last successful version (${previousDeliveryRowCount}). `
-        + 'Deletion reconciliation is not implemented; refusing to persist this file.',
-      );
+      && deliverySourceFile.previousSourceSha256 !== inspected.files[0]!.sha256) {
+      const currentRowCount = inspected.files[0]!.rowCount;
+      const countDescription = previousDeliveryRowCount === currentRowCount
+        ? `same row count (${currentRowCount})`
+        : `row count changed from ${previousDeliveryRowCount ?? 'unknown'} to ${currentRowCount}`;
+      const message = `Changed delivery source ${logicalSourcePath(dataPaths.ballByBallCsv)} has ${countDescription}, `
+        + 'but the source provides no reviewed stable delivery identifier. A row correction cannot be distinguished '
+        + 'from a replacement; canonical delivery persistence is blocked pending human reconciliation.';
+      const identityIssue: IngestionIssue = {
+        severity: 'blocking',
+        code: 'delivery:source-identity-ambiguous',
+        message,
+        sourceFile: logicalSourcePath(dataPaths.ballByBallCsv),
+        entityName: 'delivery',
+        sourceFileId: deliverySourceFile.id,
+      };
+      issues.push(identityIssue);
+      failed += rawDeliveryRows.length;
+      await repository.persistIssues([identityIssue], runId);
+      throw new Error(message);
     }
-    // Known limitation: same-count changed content is allowed through. Without a stable
-    // per-row identifier it is impossible to distinguish a legitimate field-value update
-    // from a silent record replacement (remove one row, add a different one). Deliveries
-    // are reconciled by their (match_id, innings_no, delivery_no) sequence identity.
-    // See README: "same-count delivery file replacements remain ambiguous".
 
     const deliveryFileUnchanged = sourceFileWasCompletedFor(deliverySourceFile, processedSeasons);
     const matchFileUnchanged = sourceFileWasCompletedFor(matchSourceFile, processedSeasons);
@@ -229,7 +256,7 @@ export async function runSeasonIngestion(
     const seasonIds = new Map<string, string>();
     for (const sourceYear of sourceYears) {
       const canonicalSeason = canonicalSeasonForSourceYear(sourceYear);
-      const outcome = await repository.ensureSeason(canonicalSeason.seasonKey, canonicalSeason.label);
+      const outcome = await repository.ensureSeason(canonicalSeason.seasonKey, canonicalSeason.label, runId);
       if (outcome.outcome === 'rejected' || !outcome.data?.id) {
         throw new Error(outcome.reason ?? `Canonical season ${canonicalSeason.seasonKey} was rejected.`);
       }
@@ -264,7 +291,7 @@ export async function runSeasonIngestion(
       const key = `${sourceSystem}\u001f${normalizeAlias(name)}`;
       if (teamCache.has(key)) return teamCache.get(key) ?? null;
       try {
-        const outcome = await repository.ensureTeam(name, sourceSystem);
+        const outcome = await repository.ensureTeam(name, sourceSystem, runId);
         if (outcome.outcome !== 'rejected' && outcome.data) {
           const value = { id: outcome.data.id, canonicalName: outcome.data.canonicalName };
           teamCache.set(key, value);
@@ -670,9 +697,13 @@ export async function runSeasonIngestion(
         issue.sourceFileId = sourceFileIds.get(issue.sourceFile);
       }
     }
-    await repository.persistIssues(issues, ingestionRunId);
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+    await heartbeatTask;
+    if (heartbeatError) throw heartbeatError;
+    await repository.persistIssues(issues, runId);
     await repository.completeIngestionRun(
-      ingestionRunId,
+      runId,
       issues.filter((issue) => issue.severity === 'error' || issue.severity === 'blocking').length,
       counters(),
       {
@@ -685,6 +716,9 @@ export async function runSeasonIngestion(
     );
     return report();
   } catch (error) {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = null;
+    await heartbeatTask;
     const message = errorMessage(error);
     if (ingestionRunId) {
       const failureIssue: IngestionIssue = {

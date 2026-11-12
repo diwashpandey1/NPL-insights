@@ -38,22 +38,24 @@ export interface DeliveryPersistenceInput {
 export interface IngestionRepository {
   isAvailable(): boolean;
   /**
-   * Atomically creates an ingestion run for the given source file, failing if another
-   * 'running' run already exists for the same (sourceSystem, logicalPath) pair.
-   * Also expires any stale runs (started_at older than staleThresholdMinutes) before
-   * checking for conflicts, so interrupted workers do not permanently block the pipeline.
+   * Atomically creates a run and a durable lease for the source path. An unexpired
+   * lease rejects another worker; an expired lease can be recovered for that path.
    *
    * Throws with a message containing 'concurrent_ingestion_conflict' if another run
    * is already active.
    */
-  createIngestionRun(input: { pipelineVersion: string; sourceSet: string; sourceSystem?: string; logicalPath?: string; staleThresholdMinutes?: number }): Promise<{ id: string }>;
+  createIngestionRun(input: {
+    pipelineVersion: string;
+    sourceSet: string;
+    sourceSystem?: string;
+    logicalPath?: string;
+    leaseDurationSeconds?: number;
+  }): Promise<{ id: string }>;
   completeIngestionRun(runId: string, issueCount: number, counters: Record<string, number>, summary: Record<string, unknown>): Promise<void>;
   failIngestionRun(runId: string, message: string, counters: Record<string, number>): Promise<void>;
-  /**
-   * Marks any 'running' ingestion runs older than staleThresholdMinutes as 'failed'.
-   * Returns the number of runs expired. Used for stale-lock recovery.
-   */
-  expireStaleRuns(staleThresholdMinutes?: number): Promise<number>;
+  renewIngestionRunLease(runId: string): Promise<void>;
+  /** Expires a lease only when it has passed expires_at for the requested source path. */
+  expireStaleRuns(sourceSystem: string, logicalPath: string): Promise<number>;
   registerSourceFile(input: {
     ingestionRunId: string;
     sourceSystem: string;
@@ -64,8 +66,8 @@ export interface IngestionRepository {
     rowCount: number;
   }): Promise<SourceFileRegistration>;
   persistIssues(issues: IngestionIssue[], ingestionRunId: string): Promise<void>;
-  ensureSeason(seasonKey: string, label: string): Promise<PersistenceOutcome<{ id: string }>>;
-  ensureTeam(teamName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>>;
+  ensureSeason(seasonKey: string, label: string, ingestionRunId: string): Promise<PersistenceOutcome<{ id: string }>>;
+  ensureTeam(teamName: string, sourceSystem: string, ingestionRunId: string): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>>;
   resolvePlayer(playerName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; displayName: string }>>;
   persistReviewedPlayerAlias(input: { playerId: string; playerName: string; sourceSystem: string }): Promise<PersistenceOutcome<{ id: string }>>;
   persistMatch(input: MatchPersistenceInput): Promise<PersistenceOutcome<{ id: string }>>;
@@ -96,6 +98,7 @@ type RpcResult<T> = { data: T | null; error: { message: string } | null };
 
 export class SupabaseIngestionRepository implements IngestionRepository {
   public client: typeof supabase = supabase;
+  private readonly leaseTokens = new Map<string, string>();
 
   isAvailable(): boolean {
     return Boolean(this.client);
@@ -108,19 +111,24 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     return this.client;
   }
 
-  async createIngestionRun(input: { pipelineVersion: string; sourceSet: string; sourceSystem?: string; logicalPath?: string; staleThresholdMinutes?: number }): Promise<{ id: string }> {
+  async createIngestionRun(input: {
+    pipelineVersion: string;
+    sourceSet: string;
+    sourceSystem?: string;
+    logicalPath?: string;
+    leaseDurationSeconds?: number;
+  }): Promise<{ id: string }> {
     const client = this.ensureClient();
 
-    // When a source file path is provided, use the atomic lock+create function
-    // to prevent concurrent ingestion of the same source file.
+    // A path-scoped lease survives the RPC transaction and is retained for renew/finalize calls.
     if (input.sourceSystem && input.logicalPath) {
       const { data, error } = await client.rpc('ingestion_acquire_run_lock', {
         p_source_system: input.sourceSystem,
         p_logical_path: input.logicalPath,
         p_pipeline_version: input.pipelineVersion,
         p_source_set: input.sourceSet,
-        p_stale_threshold_minutes: input.staleThresholdMinutes ?? 60,
-      }) as RpcResult<{ id: string }>;
+        p_lease_duration_seconds: input.leaseDurationSeconds ?? 300,
+      }) as RpcResult<{ id: string; lease_token: string }>;
       if (error) {
         // Translate the database-level error to a consistent application message.
         if (error.message.includes('concurrent_ingestion_conflict')) {
@@ -131,9 +139,10 @@ export class SupabaseIngestionRepository implements IngestionRepository {
         }
         throw new Error(`Failed to create ingestion run: ${error.message}`);
       }
-      if (!data?.id) {
-        throw new Error('ingestion_acquire_run_lock returned no run id.');
+      if (!data?.id || !data.lease_token) {
+        throw new Error('ingestion_acquire_run_lock returned an incomplete lease.');
       }
+      this.leaseTokens.set(data.id, data.lease_token);
       return { id: data.id };
     }
 
@@ -163,6 +172,20 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     summary: Record<string, unknown>,
   ): Promise<void> {
     const client = this.ensureClient();
+    const leaseToken = this.leaseTokens.get(runId);
+    if (leaseToken) {
+      const { error } = await client.rpc('ingestion_finalize_run', {
+        p_run_id: runId,
+        p_lease_token: leaseToken,
+        p_status: issueCount > 0 ? 'completed_with_errors' : 'succeeded',
+        p_counters: counters,
+        p_summary: summary,
+      });
+      if (error) throw new Error(`Failed to complete ingestion run ${runId}: ${error.message}`);
+      this.leaseTokens.delete(runId);
+      return;
+    }
+
     const { error } = await client.from('ingestion_runs').update({
       finished_at: new Date().toISOString(),
       status: issueCount > 0 ? 'completed_with_errors' : 'succeeded',
@@ -181,6 +204,20 @@ export class SupabaseIngestionRepository implements IngestionRepository {
 
   async failIngestionRun(runId: string, message: string, counters: Record<string, number>): Promise<void> {
     const client = this.ensureClient();
+    const leaseToken = this.leaseTokens.get(runId);
+    if (leaseToken) {
+      const { error } = await client.rpc('ingestion_finalize_run', {
+        p_run_id: runId,
+        p_lease_token: leaseToken,
+        p_status: 'failed',
+        p_counters: counters,
+        p_summary: { failure: message },
+      });
+      if (error) throw new Error(`Failed to mark ingestion run ${runId} as failed: ${error.message}`);
+      this.leaseTokens.delete(runId);
+      return;
+    }
+
     const { error } = await client.from('ingestion_runs').update({
       finished_at: new Date().toISOString(),
       status: 'failed',
@@ -197,10 +234,20 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     }
   }
 
-  async expireStaleRuns(staleThresholdMinutes = 60): Promise<number> {
+  async renewIngestionRunLease(runId: string): Promise<void> {
+    const leaseToken = this.requireLeaseToken(runId);
+    const { error } = await this.ensureClient().rpc('ingestion_renew_run_lease', {
+      p_run_id: runId,
+      p_lease_token: leaseToken,
+    });
+    if (error) throw new Error(`Failed to renew ingestion lease for run ${runId}: ${error.message}`);
+  }
+
+  async expireStaleRuns(sourceSystem: string, logicalPath: string): Promise<number> {
     const client = this.ensureClient();
     const { data, error } = await client.rpc('ingestion_expire_stale_runs', {
-      p_stale_threshold_minutes: staleThresholdMinutes,
+      p_source_system: sourceSystem,
+      p_logical_path: logicalPath,
     }) as RpcResult<number>;
     if (error) {
       throw new Error(`Failed to expire stale ingestion runs: ${error.message}`);
@@ -256,6 +303,7 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       p_format: input.format,
       p_season_id: input.seasonId,
       p_row_count: input.rowCount,
+      p_lease_token: this.requireLeaseToken(input.ingestionRunId),
     }) as RpcResult<{
       id: string;
       outcome: SourceFileRegistration['outcome'];
@@ -300,19 +348,25 @@ export class SupabaseIngestionRepository implements IngestionRepository {
     }
   }
 
-  async ensureSeason(seasonKey: string, label: string): Promise<PersistenceOutcome<{ id: string }>> {
+  async ensureSeason(seasonKey: string, label: string, ingestionRunId: string): Promise<PersistenceOutcome<{ id: string }>> {
     const client = this.ensureClient();
     const { data, error } = await client.rpc('ingestion_ensure_season', {
       p_season_key: seasonKey,
       p_label: label,
       p_source_season_year: Number(seasonKey.slice(0, 4)),
+      p_ingestion_run_id: ingestionRunId,
+      p_lease_token: this.requireLeaseToken(ingestionRunId),
     }) as RpcResult<{ id: string; outcome: PersistenceOutcome['outcome']; reason?: string }>;
     if (error) throw new Error(`Failed to ensure season ${seasonKey}: ${error.message}`);
     if (!data?.id || !data.outcome) throw new Error(`Season ensure returned an invalid result for ${seasonKey}.`);
     return { outcome: data.outcome, data: { id: data.id }, reason: data.reason };
   }
 
-  async ensureTeam(teamName: string, sourceSystem: string): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>> {
+  async ensureTeam(
+    teamName: string,
+    sourceSystem: string,
+    ingestionRunId: string,
+  ): Promise<PersistenceOutcome<{ id: string; canonicalName: string }>> {
     const canonicalName = canonicalizeTeamName(teamName);
     if (!canonicalName || !canonicalTeamNames.has(canonicalName)) {
       return { outcome: 'rejected', reason: `Unrecognized canonical team identity: ${teamName}` };
@@ -324,6 +378,8 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       p_source_system: sourceSystem,
       p_alias: teamName.trim(),
       p_alias_normalized: normalizeAlias(teamName),
+      p_ingestion_run_id: ingestionRunId,
+      p_lease_token: this.requireLeaseToken(ingestionRunId),
     }) as RpcResult<{ id: string; canonical_name: string; outcome: PersistenceOutcome['outcome']; reason?: string }>;
     if (error) throw new Error(`Failed to resolve team alias ${teamName}: ${error.message}`);
     if (!data?.outcome) throw new Error(`Team alias resolution returned an invalid result for ${teamName}.`);
@@ -629,6 +685,14 @@ export class SupabaseIngestionRepository implements IngestionRepository {
       }
       return { outcome: result.outcome, data: { id: result.id } };
     });
+  }
+
+  private requireLeaseToken(runId: string): string {
+    const leaseToken = this.leaseTokens.get(runId);
+    if (!leaseToken) {
+      throw new Error(`Ingestion run ${runId} does not have a source lease owned by this worker.`);
+    }
+    return leaseToken;
   }
 }
 

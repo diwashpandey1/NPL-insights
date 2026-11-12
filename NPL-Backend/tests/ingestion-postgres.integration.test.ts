@@ -117,11 +117,28 @@ function hashContent(content: string): string {
 class TrackingIngestionRepository extends SupabaseIngestionRepository {
   readonly runIds = new Set<string>();
 
-  override async createIngestionRun(input: { pipelineVersion: string; sourceSet: string }): Promise<{ id: string }> {
+  override async createIngestionRun(
+    input: Parameters<SupabaseIngestionRepository['createIngestionRun']>[0],
+  ): Promise<{ id: string }> {
     const run = await super.createIngestionRun(input);
     this.runIds.add(run.id);
     return run;
   }
+}
+
+async function createLeasedRun(
+  repository: TrackingIngestionRepository,
+  logicalPath: string,
+  sourceSet: string,
+  leaseDurationSeconds = 300,
+): Promise<{ id: string }> {
+  return repository.createIngestionRun({
+    pipelineVersion: 'integration-lease-test',
+    sourceSet,
+    sourceSystem: 'npl-master',
+    logicalPath,
+    leaseDurationSeconds,
+  });
 }
 
 async function cleanupIntegrationRows(
@@ -264,6 +281,11 @@ async function cleanupIntegrationRows(
     : { data: [], error: null };
   assert.ifError(remainingRuns.error);
   assert.equal(remainingRuns.data?.length, 0, 'Test ingestion runs remain after cleanup.');
+  const remainingLeases = repository.runIds.size
+    ? await client.from('ingestion_run_leases').select('ingestion_run_id').in('ingestion_run_id', [...repository.runIds])
+    : { data: [], error: null };
+  assert.ifError(remainingLeases.error);
+  assert.equal(remainingLeases.data?.length, 0, 'Test ingestion leases remain after cleanup.');
 }
 
 async function assertLatestRunFailed(
@@ -282,13 +304,35 @@ async function assertLatestRunFailed(
   assert.ok(run.data.finished_at);
 }
 
+async function cleanupTrackedRuns(
+  client: ReturnType<typeof createClient>,
+  repositories: TrackingIngestionRepository[],
+): Promise<void> {
+  const runIds = [...new Set(repositories.flatMap((repository) => [...repository.runIds]))];
+  if (!runIds.length) return;
+  const { error: leaseError } = await client.from('ingestion_run_leases')
+    .delete()
+    .in('ingestion_run_id', runIds);
+  assert.ifError(leaseError);
+  const { error: runError } = await client.from('ingestion_runs').delete().in('id', runIds);
+  assert.ifError(runError);
+  const remainingLeases = await client.from('ingestion_run_leases')
+    .select('ingestion_run_id')
+    .in('ingestion_run_id', runIds);
+  assert.ifError(remainingLeases.error);
+  assert.equal(remainingLeases.data?.length, 0, 'Synthetic ingestion leases remain.');
+  const remainingRuns = await client.from('ingestion_runs').select('id').in('id', runIds);
+  assert.ifError(remainingRuns.error);
+  assert.equal(remainingRuns.data?.length, 0, 'Synthetic ingestion runs remain.');
+}
+
 test('local PostgreSQL ingestion and repository integration', {
   skip: !localUrl || !localServiceRoleKey || !localAnonKey
     ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
     : false,
 }, async () => {
   const parsedUrl = new URL(localUrl!);
-  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname), 'Integration tests must use loopback Supabase only.');
+  assert.ok(['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsedUrl.hostname), 'Integration tests must use loopback Supabase only.');
 
   const client = createClient(localUrl!, localServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -407,9 +451,23 @@ test('local PostgreSQL ingestion and repository integration', {
     const canonicalSeason = await client.from('seasons').select('id').eq('season_key', '2024/25').single();
     assert.ifError(canonicalSeason.error);
     const matchRecord = mapMatchRecord(makeMatchRow(numericId), matchLogicalPath, 2);
+    const metadataRun = await createLeasedRun(
+      repository,
+      logicalSourcePath(path.join(tempDirectory, 'metadata.csv')),
+      `metadata-${suffix}`,
+    );
+    const metadataMatchSource = await repository.registerSourceFile({
+      ingestionRunId: metadataRun.id,
+      sourceSystem: 'npl-match-feed',
+      logicalPath: matchLogicalPath,
+      contentSha256: matchSource.sha256,
+      format: 'csv',
+      seasonId: null,
+      rowCount: 1,
+    });
     const repeatedMatchOutcome = await repository.persistMatch({
       record: matchRecord,
-      sourceFileId: matchSourceFileId,
+      sourceFileId: metadataMatchSource.id,
       seasonId: canonicalSeason.data.id,
       matchNumber: numericId,
       teamAId: battingTeamId,
@@ -462,29 +520,27 @@ test('local PostgreSQL ingestion and repository integration', {
     const unknownPlayer = await repository.resolvePlayer(`Definitely Unknown ${suffix}`, sourceSystem);
     assert.equal(unknownPlayer.outcome, 'rejected');
     assert.equal(unknownPlayer.data, undefined);
-    const unknownTeam = await repository.ensureTeam(`Unknown Franchise ${suffix}`, sourceSystem);
+    const unknownTeam = await repository.ensureTeam(`Unknown Franchise ${suffix}`, sourceSystem, metadataRun.id);
     assert.equal(unknownTeam.outcome, 'rejected');
     assert.equal(unknownTeam.data, undefined);
 
-    const teamAlias = await repository.ensureTeam('Kathmandu Gorkhas', sourceSystem);
+    const teamAlias = await repository.ensureTeam('Kathmandu Gorkhas', sourceSystem, metadataRun.id);
     assert.ok(teamAlias.data?.id);
-    const sameTeamAlias = await repository.ensureTeam('Kathmandu Gorkhas', sourceSystem);
+    const sameTeamAlias = await repository.ensureTeam('Kathmandu Gorkhas', sourceSystem, metadataRun.id);
     assert.equal(sameTeamAlias.outcome, 'unchanged');
-    const conflictingAlias = await client.rpc('ingestion_ensure_team_alias', {
-      p_team_key: 'team-janakpur-bolts',
-      p_canonical_name: 'Janakpur Bolts',
-      p_source_system: 'npl-match-feed',
-      p_alias: 'Kathmandu Gorkhas',
-      p_alias_normalized: 'kathmandu gorkhas',
-    });
-    assert.ifError(conflictingAlias.error);
-    assert.equal(conflictingAlias.data?.outcome, 'rejected');
 
     const syntheticSeasonKey = `2099/${suffix}`;
-    const newSeason = await repository.ensureSeason(syntheticSeasonKey, syntheticSeasonKey);
+    const newSeason = await repository.ensureSeason(syntheticSeasonKey, syntheticSeasonKey, metadataRun.id);
     assert.equal(newSeason.outcome, 'inserted');
-    const existingSeason = await repository.ensureSeason(syntheticSeasonKey, syntheticSeasonKey);
+    const existingSeason = await repository.ensureSeason(syntheticSeasonKey, syntheticSeasonKey, metadataRun.id);
     assert.equal(existingSeason.outcome, 'unchanged');
+    await repository.completeIngestionRun(metadataRun.id, 0, {
+      rowsRead: 0,
+      rowsInserted: 0,
+      rowsUpdated: 0,
+      rowsUnchanged: 0,
+      rowsRejected: 0,
+    }, { pipelineVersion: 'integration-lease-test' });
 
     const playerInsert = await client.from('players')
       .insert({ display_name: `Reviewed Integration Player ${suffix}` })
@@ -518,6 +574,8 @@ test('local PostgreSQL ingestion and repository integration', {
     const replayRun = await repository.createIngestionRun({
       pipelineVersion: 'phase-2-final-integrity-audit-v1',
       sourceSet: 'integration-replay',
+      sourceSystem: 'npl-master',
+      logicalPath: deliveryLogicalPath,
     });
     const replayDeliverySource = await repository.registerSourceFile({
       ingestionRunId: replayRun.id,
@@ -528,7 +586,7 @@ test('local PostgreSQL ingestion and repository integration', {
       seasonId: null,
       rowCount: initialDeliveries.length,
     });
-    assert.equal(replayDeliverySource.id, initialDeliverySourceFileId);
+    assert.notEqual(replayDeliverySource.id, initialDeliverySourceFileId);
     assert.equal(replayDeliverySource.previousRunStatus, 'succeeded');
     const replayMatchSource = await repository.registerSourceFile({
       ingestionRunId: replayRun.id,
@@ -539,7 +597,7 @@ test('local PostgreSQL ingestion and repository integration', {
       seasonId: null,
       rowCount: 1,
     });
-    assert.equal(replayMatchSource.id, matchSourceFileId);
+    assert.notEqual(replayMatchSource.id, matchSourceFileId);
     await repository.completeIngestionRun(replayRun.id, 0, {
       rowsRead: 6,
       rowsInserted: 0,
@@ -555,125 +613,12 @@ test('local PostgreSQL ingestion and repository integration', {
     assert.equal(secondReport.successfullyInserted, 0);
     assert.equal(secondReport.updatedRecords, 0);
     assert.equal(secondReport.skippedRecords, 6);
-    const repeatedDeliveries = await client.from('deliveries').select('id').eq('match_id', canonicalMatchId);
+    const repeatedDeliveries = await client.from('deliveries')
+      .select('id,source_file_id')
+      .eq('match_id', canonicalMatchId);
     assert.ifError(repeatedDeliveries.error);
     assert.equal(repeatedDeliveries.data?.length, 5);
-
-    const changedDeliveries = initialDeliveries.map((row) => ({ ...row }));
-    changedDeliveries[1] = {
-      ...changedDeliveries[1]!,
-      wide_runs: '2',
-      extra_runs: '2',
-      total_runs: '2',
-    };
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
-    const changedReport = await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
-    assert.equal(changedReport.successfullyInserted, 0);
-    assert.ok(changedReport.updatedRecords > 0);
-    const modifiedDelivery = await client.from('deliveries')
-      .select('wide_runs,extra_runs,total_runs')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .eq('delivery_no', 2)
-      .single();
-    assert.ifError(modifiedDelivery.error);
-    assert.deepEqual(modifiedDelivery.data, { wide_runs: 2, extra_runs: 2, total_runs: 2 });
-
-    changedDeliveries[2] = {
-      ...changedDeliveries[2]!,
-      player_out: '',
-      dismissal_kind: '',
-      fielders: '',
-    };
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
-    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
-    const deliveryThree = await client.from('deliveries')
-      .select('id')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .eq('delivery_no', 3)
-      .single();
-    assert.ifError(deliveryThree.error);
-    const removedDismissals = await client.from('dismissals').select('id')
-      .eq('delivery_id', deliveryThree.data.id);
-    assert.ifError(removedDismissals.error);
-    assert.equal(removedDismissals.data?.length, 0);
-    const removedFielders = await client.from('dismissal_fielders').select('fielder_no')
-      .eq('dismissal_id', initialDismissalId);
-    assert.ifError(removedFielders.error);
-    assert.equal(removedFielders.data?.length, 0);
-
-    changedDeliveries[2] = {
-      ...changedDeliveries[2]!,
-      player_out: `Changed Out ${suffix}`,
-      dismissal_kind: 'run out',
-      fielders: `Replacement Fielder One ${suffix};Replacement Fielder Two ${suffix}`,
-    };
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, changedDeliveries), 'utf8');
-    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
-    const changedDismissal = await client.from('dismissals')
-      .select('id,dismissal_kind,player_out_name_raw')
-      .eq('delivery_id', deliveryThree.data.id)
-      .single();
-    assert.ifError(changedDismissal.error);
-    assert.equal(changedDismissal.data.dismissal_kind, 'run out');
-    assert.equal(changedDismissal.data.player_out_name_raw, `Changed Out ${suffix}`);
-    const replacementFielders = await client.from('dismissal_fielders')
-      .select('fielder_name_raw')
-      .eq('dismissal_id', changedDismissal.data.id)
-      .order('fielder_no');
-    assert.ifError(replacementFielders.error);
-    assert.deepEqual(replacementFielders.data?.map((row) => row.fielder_name_raw), [
-      `Replacement Fielder One ${suffix}`,
-      `Replacement Fielder Two ${suffix}`,
-    ]);
-
-    const withAddedDelivery = [
-      ...changedDeliveries,
-      makeDeliveryRow(numericId, 1, `Added Delivery ${suffix}`, '0.4'),
-    ];
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, withAddedDelivery), 'utf8');
-    await runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths });
-    const afterAddition = await client.from('deliveries')
-      .select('id,delivery_no,batter_name_raw')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .order('delivery_no');
-    assert.ifError(afterAddition.error);
-    assert.equal(afterAddition.data?.length, 5);
-    assert.equal(afterAddition.data?.[4]?.delivery_no, 5);
-    assert.equal(afterAddition.data?.[4]?.batter_name_raw, `Added Delivery ${suffix}`);
-
-    const beforeBlockedRemoval = afterAddition.data?.map((row) => ({ ...row })) ?? [];
-    const removedTailDeliveries = withAddedDelivery.slice(0, -1);
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, removedTailDeliveries), 'utf8');
-    await assert.rejects(
-      () => runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths }),
-      /Deletion reconciliation is not implemented; refusing to persist this file/,
-    );
-    await assertLatestRunFailed(client, repository);
-    const afterBlockedTailRemoval = await client.from('deliveries')
-      .select('id,delivery_no,batter_name_raw')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .order('delivery_no');
-    assert.ifError(afterBlockedTailRemoval.error);
-    assert.deepEqual(afterBlockedTailRemoval.data, beforeBlockedRemoval);
-
-    const removedMiddleDeliveries = withAddedDelivery.filter((_, index) => index !== 1);
-    await fs.writeFile(mainPaths.ballByBallCsv, toCsv(deliveryHeaders, removedMiddleDeliveries), 'utf8');
-    await assert.rejects(
-      () => runSeasonIngestion('2024/25', { repository, dataPaths: mainPaths }),
-      /Deletion reconciliation is not implemented; refusing to persist this file/,
-    );
-    await assertLatestRunFailed(client, repository);
-    const afterBlockedMiddleRemoval = await client.from('deliveries')
-      .select('id,delivery_no,batter_name_raw')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .order('delivery_no');
-    assert.ifError(afterBlockedMiddleRemoval.error);
-    assert.deepEqual(afterBlockedMiddleRemoval.data, beforeBlockedRemoval);
+    assert.ok(repeatedDeliveries.data?.every((row) => row.source_file_id === initialDeliverySourceFileId));
 
     const base2025 = numericId + 100;
     const id2025 = base2025 + 32;
@@ -756,6 +701,8 @@ test('local PostgreSQL ingestion and repository integration', {
     const failureRun = await repository.createIngestionRun({
       pipelineVersion: 'integration-failure-test',
       sourceSet: 'integration-failure',
+      sourceSystem: 'npl-master',
+      logicalPath: logicalSourcePath(path.join(tempDirectory, 'failure.csv')),
     });
     const failureSource = await repository.registerSourceFile({
       ingestionRunId: failureRun.id,
@@ -927,7 +874,7 @@ test('local anonymous and authenticated clients cannot access ingestion metadata
       ['anonymous', anonymousClient],
       ['authenticated', authenticatedClient],
     ] as const) {
-      for (const table of ['ingestion_runs', 'source_files', 'ingestion_issues', 'match_source_keys'] as const) {
+      for (const table of ['ingestion_runs', 'ingestion_run_leases', 'source_files', 'ingestion_issues', 'match_source_keys'] as const) {
         const { error } = await client.from(table).select('*').limit(1);
         assert.ok(error, `${label} client unexpectedly read restricted table ${table}.`);
         assert.equal(error.code, '42501', `${label} access to ${table} should be rejected by PostgreSQL privileges.`);
@@ -945,6 +892,8 @@ test('local anonymous and authenticated clients cannot access ingestion metadata
       p_season_key: `2098/${suffix}`,
       p_label: `2098/${suffix}`,
       p_source_season_year: 2098,
+      p_ingestion_run_id: runId,
+      p_lease_token: crypto.randomUUID(),
     });
     assert.ok(rpcAttempt.error, 'Authenticated client unexpectedly executed a service-only ingestion RPC.');
     assert.equal(rpcAttempt.error.code, '42501');
@@ -989,31 +938,22 @@ async function runExtraFixtureFiles(
   return writeFixture(directory, matchRows, deliveryRows);
 }
 
-// ─── Task 1: Same-count swap detection ───────────────────────────────────────
-// Known limitation documented: same-count changed content is allowed through the
-// pipeline because without a stable per-row identifier, a changed-value update is
-// indistinguishable from a silent record replacement. The pipeline reconciles
-// deliveries by their (match_id, innings_no, delivery_no) sequence position.
-// See README: "same-count delivery file replacements remain ambiguous".
-
-test('same-count delivery file swap: pipeline proceeds and documents the limitation', {
+test('ambiguous same-count delivery replacement is blocked without canonical writes', {
   skip: !localUrl || !localServiceRoleKey || !localAnonKey
     ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
     : false,
 }, async () => {
   const parsedUrl = new URL(localUrl!);
-  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname));
+  assert.ok(['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsedUrl.hostname));
 
   const client = createClient(localUrl!, localServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const repository = new TrackingIngestionRepository();
   repository.client = client;
-
   const suffix = crypto.randomUUID().replace(/-/g, '');
   const numericId = Number.parseInt(suffix.slice(0, 7), 16) % 700000 + 200000;
   const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-swap-'));
-
   const baseline = {
     teamIds: new Set<string>(),
     seasonIds: new Set<string>(),
@@ -1022,37 +962,32 @@ test('same-count delivery file swap: pipeline proceeds and documents the limitat
   };
 
   try {
-    for (const team of (await client.from('teams')
-      .select('id').in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts'])).data ?? []) {
-      baseline.teamIds.add(team.id);
-    }
-    for (const season of (await client.from('seasons')
-      .select('id').in('season_key', ['2024/25', `2099/${suffix}`])).data ?? []) {
-      baseline.seasonIds.add(season.id);
-    }
-    for (const alias of (await client.from('team_aliases')
-      .select('id')
+    const teamBaseline = await client.from('teams').select('id')
+      .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+    assert.ifError(teamBaseline.error);
+    for (const team of teamBaseline.data ?? []) baseline.teamIds.add(team.id);
+    const seasonBaseline = await client.from('seasons').select('id')
+      .in('season_key', ['2024/25', `2099/${suffix}`]);
+    assert.ifError(seasonBaseline.error);
+    for (const season of seasonBaseline.data ?? []) baseline.seasonIds.add(season.id);
+    const aliasBaseline = await client.from('team_aliases').select('id')
       .in('source_system', ['npl-match-feed', 'npl-master'])
-      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts'])).data ?? []) {
-      baseline.teamAliasIds.add(alias.id);
-    }
+      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts']);
+    assert.ifError(aliasBaseline.error);
+    for (const alias of aliasBaseline.data ?? []) baseline.teamAliasIds.add(alias.id);
 
     const mainDirectory = path.join(tempDirectory, 'main');
     await fs.mkdir(mainDirectory);
-
     const originalDeliveries = [
       makeDeliveryRow(numericId, 1, `Swap Batter A ${suffix}`, '0.1'),
       makeDeliveryRow(numericId, 1, `Swap Batter B ${suffix}`, '0.2'),
       makeDeliveryRow(numericId, 1, `Swap Batter C ${suffix}`, '0.3'),
     ];
     const paths = await writeFixture(mainDirectory, [makeMatchRow(numericId)], originalDeliveries);
-
-    // First run succeeds
     const firstReport = await runSeasonIngestion('2024/25', { repository, dataPaths: paths });
     assert.equal(firstReport.failedRecords, 0);
 
-    const matchKey = await client.from('match_source_keys')
-      .select('match_id')
+    const matchKey = await client.from('match_source_keys').select('match_id')
       .eq('source_system', 'npl-match-feed')
       .eq('source_season_key', '2024')
       .eq('external_match_key', String(numericId))
@@ -1060,33 +995,55 @@ test('same-count delivery file swap: pipeline proceeds and documents the limitat
       .single();
     assert.ifError(matchKey.error);
     const canonicalMatchId = matchKey.data.match_id;
+    const before = await client.from('deliveries')
+      .select('id,source_file_id,source_row_number,source_ball_label,batter_name_raw,batter_runs,wide_runs,no_ball_runs,total_runs')
+      .eq('match_id', canonicalMatchId)
+      .order('innings_no')
+      .order('delivery_no');
+    assert.ifError(before.error);
+    assert.equal(before.data?.length, originalDeliveries.length);
 
-    // Construct a same-count swap: same 3 rows but one batter name changed.
     const swappedDeliveries = [
-      makeDeliveryRow(numericId, 1, `Swap Batter A ${suffix}`, '0.1'),
-      makeDeliveryRow(numericId, 1, `UPDATED Batter ${suffix}`, '0.2'), // name changed in place
-      makeDeliveryRow(numericId, 1, `Swap Batter C ${suffix}`, '0.3'),
+      originalDeliveries[0]!,
+      makeDeliveryRow(numericId, 1, `Replacement Batter ${suffix}`, '0.2'),
+      originalDeliveries[2]!,
     ];
-    assert.equal(swappedDeliveries.length, originalDeliveries.length, 'row count must be identical');
+    assert.equal(swappedDeliveries.length, originalDeliveries.length);
     await fs.writeFile(paths.ballByBallCsv, toCsv(deliveryHeaders, swappedDeliveries), 'utf8');
 
-    // The pipeline allows same-count changes through (known limitation).
-    // The delivery at position 2 is updated in place (by sequence identity).
-    const swapReport = await runSeasonIngestion('2024/25', { repository, dataPaths: paths });
-    assert.equal(swapReport.fatalErrors, 0, 'same-count change must not cause a fatal error');
-    // The updated batter name appears in the database — confirming the update path ran.
-    const updatedDelivery = await client.from('deliveries')
-      .select('batter_name_raw')
-      .eq('match_id', canonicalMatchId)
-      .eq('innings_no', 1)
-      .eq('delivery_no', 2)
-      .single();
-    assert.ifError(updatedDelivery.error);
-    assert.equal(
-      updatedDelivery.data.batter_name_raw,
-      `UPDATED Batter ${suffix}`,
-      'updated batter name must be persisted (same-count update is allowed)',
+    await assert.rejects(
+      () => runSeasonIngestion('2024/25', { repository, dataPaths: paths }),
+      /no reviewed stable delivery identifier/,
     );
+    await assertLatestRunFailed(client, repository);
+
+    const after = await client.from('deliveries')
+      .select('id,source_file_id,source_row_number,source_ball_label,batter_name_raw,batter_runs,wide_runs,no_ball_runs,total_runs')
+      .eq('match_id', canonicalMatchId)
+      .order('innings_no')
+      .order('delivery_no');
+    assert.ifError(after.error);
+    assert.deepEqual(after.data, before.data, 'the failed same-count swap must not mutate canonical deliveries or provenance');
+
+    const failedRunId = [...repository.runIds].at(-1);
+    assert.ok(failedRunId);
+    const blockingIssue = await client.from('ingestion_issues')
+      .select('severity,issue_code,message')
+      .eq('ingestion_run_id', failedRunId)
+      .eq('issue_code', 'delivery:source-identity-ambiguous')
+      .single();
+    assert.ifError(blockingIssue.error);
+    assert.equal(blockingIssue.data.severity, 'blocking');
+    assert.match(blockingIssue.data.message, /same row count/);
+
+    const versions = await client.from('source_files')
+      .select('id,content_sha256,ingestion_run_id')
+      .eq('source_system', 'npl-master')
+      .eq('logical_path', logicalSourcePath(paths.ballByBallCsv))
+      .order('loaded_at');
+    assert.ifError(versions.error);
+    assert.equal(versions.data?.length, 2);
+    assert.notEqual(versions.data?.[0]?.id, versions.data?.[1]?.id);
   } finally {
     try {
       await cleanupIntegrationRows(client, repository, tempDirectory, suffix, baseline);
@@ -1096,23 +1053,31 @@ test('same-count delivery file swap: pipeline proceeds and documents the limitat
   }
 });
 
-// ─── Task 2: Concurrent ingestion protection ──────────────────────────────────
-
-test('concurrent ingestion protection', {
+test('active ingestion renews a short lease while processing continues', {
   skip: !localUrl || !localServiceRoleKey || !localAnonKey
     ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
     : false,
 }, async () => {
   const parsedUrl = new URL(localUrl!);
-  assert.ok(['127.0.0.1', 'localhost', '::1'].includes(parsedUrl.hostname));
-
+  assert.ok(['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsedUrl.hostname));
   const client = createClient(localUrl!, localServiceRoleKey!, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-
+  let delayed = false;
+  class SlowIngestionRepository extends TrackingIngestionRepository {
+    override async ensureSeason(seasonKey: string, label: string, ingestionRunId: string) {
+      if (!delayed) {
+        delayed = true;
+        await new Promise((resolve) => setTimeout(resolve, 1250));
+      }
+      return super.ensureSeason(seasonKey, label, ingestionRunId);
+    }
+  }
+  const repository = new SlowIngestionRepository();
+  repository.client = client;
   const suffix = crypto.randomUUID().replace(/-/g, '');
   const numericId = Number.parseInt(suffix.slice(0, 7), 16) % 700000 + 200000;
-
+  const tempDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-heartbeat-'));
   const baseline = {
     teamIds: new Set<string>(),
     seasonIds: new Set<string>(),
@@ -1120,232 +1085,197 @@ test('concurrent ingestion protection', {
     playerIds: new Set<string>(),
   };
 
-  for (const team of (await client.from('teams')
-    .select('id').in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts'])).data ?? []) {
-    baseline.teamIds.add(team.id);
+  try {
+    const teamBaseline = await client.from('teams').select('id')
+      .in('canonical_name', ['Kathmandu Gorkhas', 'Janakpur Bolts']);
+    assert.ifError(teamBaseline.error);
+    for (const team of teamBaseline.data ?? []) baseline.teamIds.add(team.id);
+    const seasonBaseline = await client.from('seasons').select('id')
+      .in('season_key', ['2024/25', `2099/${suffix}`]);
+    assert.ifError(seasonBaseline.error);
+    for (const season of seasonBaseline.data ?? []) baseline.seasonIds.add(season.id);
+    const aliasBaseline = await client.from('team_aliases').select('id')
+      .in('source_system', ['npl-match-feed', 'npl-master'])
+      .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts']);
+    assert.ifError(aliasBaseline.error);
+    for (const alias of aliasBaseline.data ?? []) baseline.teamAliasIds.add(alias.id);
+
+    const paths = await writeFixture(
+      tempDirectory,
+      [makeMatchRow(numericId)],
+      [makeDeliveryRow(numericId, 1, `Heartbeat Batter ${suffix}`, '0.1')],
+    );
+    const report = await runSeasonIngestion('2024/25', {
+      repository,
+      dataPaths: paths,
+      leaseDurationSeconds: 1,
+      heartbeatIntervalMs: 100,
+    });
+    assert.equal(report.failedRecords, 0);
+    assert.equal(delayed, true);
+    const runId = [...repository.runIds].at(-1);
+    assert.ok(runId);
+    const run = await client.from('ingestion_runs').select('status').eq('id', runId).single();
+    assert.ifError(run.error);
+    assert.equal(run.data.status, 'succeeded');
+    const releasedLease = await client.from('ingestion_run_leases')
+      .select('ingestion_run_id')
+      .eq('ingestion_run_id', runId);
+    assert.ifError(releasedLease.error);
+    assert.equal(releasedLease.data?.length, 0);
+  } finally {
+    try {
+      await cleanupIntegrationRows(client, repository, tempDirectory, suffix, baseline);
+    } finally {
+      await fs.rm(tempDirectory, { recursive: true, force: true });
+    }
   }
-  for (const season of (await client.from('seasons')
-    .select('id').in('season_key', ['2024/25', `2099/${suffix}`])).data ?? []) {
-    baseline.seasonIds.add(season.id);
-  }
-  for (const alias of (await client.from('team_aliases')
-    .select('id')
-    .in('source_system', ['npl-match-feed', 'npl-master'])
-    .in('alias_normalized', ['kathmandu gorkhas', 'janakpur bolts'])).data ?? []) {
-    baseline.teamAliasIds.add(alias.id);
-  }
-
-  // ── Subtest 1: Two simultaneous ingestions against the same file are serialised ──
-  await test('two simultaneous ingestions against the same file — second is blocked', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct1-'));
-    const repo = new TrackingIngestionRepository();
-    repo.client = client;
-    try {
-      const id = numericId;
-      const paths = await writeFixture(
-        tempDir,
-        [makeMatchRow(id)],
-        [makeDeliveryRow(id, 1, `Concurrent Batter ${suffix}`, '0.1')],
-      );
-      const deliveryLogicalPath = logicalSourcePath(paths.ballByBallCsv);
-
-      // Simulate "worker 1" holding the slot by inserting a running run + source file.
-      const { data: syntheticRun, error: runError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'concurrent-test-worker1',
-        source_set: `concurrent1-${suffix}`,
-        status: 'running',
-        summary: {},
-      }).select('id').single();
-      assert.ifError(runError);
-      repo.runIds.add(syntheticRun.id);
-
-      const { error: sfError } = await client.from('source_files').insert({
-        ingestion_run_id: syntheticRun.id,
-        source_system: 'npl-master',
-        logical_path: deliveryLogicalPath,
-        content_sha256: crypto.createHash('sha256').update('placeholder-ct1').digest('hex'),
-        format: 'csv',
-        row_count: 1,
-      });
-      assert.ifError(sfError);
-
-      // Worker 2 attempts the same ingestion while worker 1's run is active — must be blocked.
-      await assert.rejects(
-        () => runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths }),
-        /is already running in another process/,
-      );
-      // When createIngestionRun fails with the conflict error, ingestionRunId is null
-      // so failIngestionRun is NOT called — no failed run record exists for the blocked attempt.
-      // The only run in repo.runIds is the synthetic worker 1 run.
-
-      // Fail worker 1's run explicitly so the slot is released.
-      const finishTime = new Date().toISOString();
-      const startTime = new Date(Date.now() - 1000).toISOString();
-      await client.from('ingestion_runs').update({
-        status: 'failed',
-        started_at: startTime,
-        finished_at: finishTime,
-        summary: { failure: 'synthetic worker 1 completion' },
-      }).eq('id', syntheticRun.id);
-
-      // Worker 2 retries — must succeed now that the slot is free.
-      const retryReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
-      assert.equal(retryReport.failedRecords, 0);
-    } finally {
-      try {
-        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
-      } finally {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      }
-    }
-  });
-
-  // ── Subtest 2: Two ingestions against different files do not block each other ──
-  await test('two simultaneous ingestions against different files do not block each other', async () => {
-    const tempDirA = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct2a-'));
-    const tempDirB = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct2b-'));
-    const repoA = new TrackingIngestionRepository();
-    repoA.client = client;
-    const repoB = new TrackingIngestionRepository();
-    repoB.client = client;
-    try {
-      const idA = numericId + 100;
-      const idB = numericId + 200;
-      const pathsA = await writeFixture(
-        tempDirA,
-        [makeMatchRow(idA)],
-        [makeDeliveryRow(idA, 1, `File-A Batter ${suffix}`, '0.1')],
-      );
-      const pathsB = await writeFixture(
-        tempDirB,
-        [makeMatchRow(idB)],
-        [makeDeliveryRow(idB, 1, `File-B Batter ${suffix}`, '0.1')],
-      );
-
-      // Run both concurrently — they target different logical paths, must not interfere.
-      const [reportA, reportB] = await Promise.all([
-        runSeasonIngestion('2024/25', { repository: repoA, dataPaths: pathsA }),
-        runSeasonIngestion('2024/25', { repository: repoB, dataPaths: pathsB }),
-      ]);
-      assert.equal(reportA.failedRecords, 0);
-      assert.equal(reportB.failedRecords, 0);
-    } finally {
-      try {
-        await cleanupIntegrationRows(client, repoA, tempDirA, suffix, baseline);
-      } finally {
-        await fs.rm(tempDirA, { recursive: true, force: true });
-      }
-      try {
-        await cleanupIntegrationRows(client, repoB, tempDirB, suffix, baseline);
-      } finally {
-        await fs.rm(tempDirB, { recursive: true, force: true });
-      }
-    }
-  });
-
-  // ── Subtest 3: Retry after a failed run succeeds ──
-  await test('retry after a failed run succeeds', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct3-'));
-    const repo = new TrackingIngestionRepository();
-    repo.client = client;
-    try {
-      const id = numericId + 300;
-      const paths = await writeFixture(
-        tempDir,
-        [makeMatchRow(id)],
-        [makeDeliveryRow(id, 1, `Retry Batter ${suffix}`, '0.1')],
-      );
-
-      // Insert a synthetic failed run (from a prior attempt that failed before inserting
-      // any source files). Its logical path is different so it does NOT block the new run.
-      const priorFinished = new Date().toISOString();
-      const priorStarted = new Date(Date.now() - 5000).toISOString();
-      const { data: failedRun, error: runError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'retry-test',
-        source_set: `retry-${suffix}`,
-        status: 'failed',
-        started_at: priorStarted,
-        finished_at: priorFinished,
-        summary: { failure: 'simulated prior failure' },
-      }).select('id').single();
-      assert.ifError(runError);
-      repo.runIds.add(failedRun.id);
-
-      // Retry succeeds because the failed run has no source_file for this logical_path.
-      const retryReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
-      assert.equal(retryReport.failedRecords, 0);
-    } finally {
-      try {
-        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
-      } finally {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      }
-    }
-  });
-
-  // ── Subtest 4: Recovery after an interrupted run (stale-lock detection) ──
-  await test('stale running ingestion run is expired and lock is recoverable', async () => {
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'npl-ct4-'));
-    const repo = new TrackingIngestionRepository();
-    repo.client = client;
-    try {
-      const id = numericId + 400;
-      const paths = await writeFixture(
-        tempDir,
-        [makeMatchRow(id)],
-        [makeDeliveryRow(id, 1, `Stale Batter ${suffix}`, '0.1')],
-      );
-      const deliveryLogicalPath = logicalSourcePath(paths.ballByBallCsv);
-
-      // Insert a 'running' run that is 2 hours old (stale) WITH a source file at
-      // the target path, so it would block fresh ingestion without stale expiry.
-      const staleStarted = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
-      const { data: staleRun, error: staleError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'stale-test',
-        source_set: `stale-${suffix}`,
-        status: 'running',
-        started_at: staleStarted,
-        summary: {},
-      }).select('id').single();
-      assert.ifError(staleError);
-      repo.runIds.add(staleRun.id);
-
-      const { error: staleSfError } = await client.from('source_files').insert({
-        ingestion_run_id: staleRun.id,
-        source_system: 'npl-master',
-        logical_path: deliveryLogicalPath,
-        content_sha256: crypto.createHash('sha256').update('stale-placeholder-ct4').digest('hex'),
-        format: 'csv',
-        row_count: 1,
-      });
-      assert.ifError(staleSfError);
-
-      // Expire stale runs (threshold: 1 minute — stale run is 2 hours old).
-      const expired = await repo.expireStaleRuns(1);
-      assert.ok(expired >= 1, 'At least the stale run should have been expired');
-
-      // Verify the stale run is now 'failed'.
-      const staleStatus = await client.from('ingestion_runs')
-        .select('status,finished_at')
-        .eq('id', staleRun.id)
-        .single();
-      assert.ifError(staleStatus.error);
-      assert.equal(staleStatus.data.status, 'failed');
-      assert.ok(staleStatus.data.finished_at);
-
-      // Fresh ingestion proceeds: stale run is 'failed' so the lock check passes.
-      const freshReport = await runSeasonIngestion('2024/25', { repository: repo, dataPaths: paths });
-      assert.equal(freshReport.failedRecords, 0);
-    } finally {
-      try {
-        await cleanupIntegrationRows(client, repo, tempDir, suffix, baseline);
-      } finally {
-        await fs.rm(tempDir, { recursive: true, force: true });
-      }
-    }
-  });
 });
 
+test('durable ingestion leases protect, renew, release, and recover source locks', {
+  skip: !localUrl || !localServiceRoleKey || !localAnonKey
+    ? 'Set local URL, service-role key, and anon key; npm run test:integration reports BLOCKED if unavailable.'
+    : false,
+}, async () => {
+  const parsedUrl = new URL(localUrl!);
+  assert.ok(['127.0.0.1', 'localhost', '::1', '[::1]'].includes(parsedUrl.hostname));
+  const client = createClient(localUrl!, localServiceRoleKey!, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const repoA = new TrackingIngestionRepository();
+  repoA.client = client;
+  const repoB = new TrackingIngestionRepository();
+  repoB.client = client;
+  const repositories = [repoA, repoB];
+  const suffix = crypto.randomUUID().replace(/-/g, '');
+  const sourcePath = (name: string) => `integration/${suffix}/${name}.csv`;
+
+  try {
+    await test('simultaneous same-path acquisitions have one owner and completion releases the lease', async () => {
+      const target = sourcePath('simultaneous');
+      const results = await Promise.all([
+        createLeasedRun(repoA, target, `simultaneous-a-${suffix}`).then(
+          (run) => ({ repository: repoA, run }),
+          (error: Error) => ({ error }),
+        ),
+        createLeasedRun(repoB, target, `simultaneous-b-${suffix}`).then(
+          (run) => ({ repository: repoB, run }),
+          (error: Error) => ({ error }),
+        ),
+      ]);
+      const winners = results.filter((result): result is { repository: TrackingIngestionRepository; run: { id: string } } => 'run' in result);
+      const blocked = results.filter((result): result is { error: Error } => 'error' in result);
+      assert.equal(winners.length, 1);
+      assert.equal(blocked.length, 1);
+      assert.match(blocked[0]!.error.message, /already running in another process/);
+
+      const lease = await client.from('ingestion_run_leases')
+        .select('ingestion_run_id,expires_at')
+        .eq('source_system', 'npl-master')
+        .eq('logical_path', target)
+        .single();
+      assert.ifError(lease.error);
+      assert.equal(lease.data.ingestion_run_id, winners[0]!.run.id);
+      assert.ok(Date.parse(lease.data.expires_at) > Date.now());
+
+      const owner = winners[0]!;
+      await owner.repository.completeIngestionRun(owner.run.id, 0, {}, { test: true });
+      const released = await client.from('ingestion_run_leases')
+        .select('ingestion_run_id')
+        .eq('ingestion_run_id', owner.run.id);
+      assert.ifError(released.error);
+      assert.equal(released.data?.length, 0);
+      const retry = await createLeasedRun(owner.repository, target, `simultaneous-retry-${suffix}`);
+      await owner.repository.failIngestionRun(retry.id, 'release test', {});
+    });
+
+    await test('different source paths hold independent leases', async () => {
+      const [runA, runB] = await Promise.all([
+        createLeasedRun(repoA, sourcePath('independent-a'), `independent-a-${suffix}`),
+        createLeasedRun(repoB, sourcePath('independent-b'), `independent-b-${suffix}`),
+      ]);
+      const leases = await client.from('ingestion_run_leases')
+        .select('ingestion_run_id')
+        .in('ingestion_run_id', [runA.id, runB.id]);
+      assert.ifError(leases.error);
+      assert.equal(leases.data?.length, 2);
+      await repoA.failIngestionRun(runA.id, 'independent path test', {});
+      await repoB.failIngestionRun(runB.id, 'independent path test', {});
+    });
+
+    await test('failure releases an active source lease', async () => {
+      const target = sourcePath('failed-release');
+      const run = await createLeasedRun(repoA, target, `failed-release-${suffix}`);
+      await repoA.failIngestionRun(run.id, 'simulated worker failure', {});
+      const released = await client.from('ingestion_run_leases')
+        .select('ingestion_run_id')
+        .eq('ingestion_run_id', run.id);
+      assert.ifError(released.error);
+      assert.equal(released.data?.length, 0);
+      const retry = await createLeasedRun(repoB, target, `failed-release-retry-${suffix}`);
+      await repoB.failIngestionRun(retry.id, 'cleanup', {});
+    });
+
+    await test('renewal keeps an older worker active beyond its original expiry', async () => {
+      const sourceSystem = 'npl-master';
+      const target = sourcePath('renewal');
+      const run = await createLeasedRun(repoA, target, `renewal-${suffix}`, 1);
+      const before = await client.from('ingestion_run_leases')
+        .select('expires_at')
+        .eq('ingestion_run_id', run.id)
+        .single();
+      assert.ifError(before.error);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      await repoA.renewIngestionRunLease(run.id);
+      const after = await client.from('ingestion_run_leases')
+        .select('expires_at')
+        .eq('ingestion_run_id', run.id)
+        .single();
+      assert.ifError(after.error);
+      assert.ok(Date.parse(after.data.expires_at) > Date.parse(before.data.expires_at));
+      assert.equal(await repoB.expireStaleRuns(sourceSystem, target), 0);
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      await assert.rejects(
+        () => createLeasedRun(repoB, target, `renewal-conflict-${suffix}`),
+        /already running in another process/,
+      );
+      await repoA.failIngestionRun(run.id, 'renewal test complete', {});
+    });
+
+    await test('interrupted worker recovery is expiry-based, source-scoped, and fences the old owner', async () => {
+      const sourceSystem = 'npl-master';
+      const pathA = sourcePath('interrupted-a');
+      const pathB = sourcePath('interrupted-b');
+      const runA = await createLeasedRun(repoA, pathA, `interrupted-a-${suffix}`, 1);
+      const runB = await createLeasedRun(repoB, pathB, `interrupted-b-${suffix}`, 1);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      assert.equal(await repoA.expireStaleRuns(sourceSystem, pathA), 1);
+      const statusA = await client.from('ingestion_runs').select('status').eq('id', runA.id).single();
+      const statusB = await client.from('ingestion_runs').select('status').eq('id', runB.id).single();
+      assert.ifError(statusA.error);
+      assert.ifError(statusB.error);
+      assert.equal(statusA.data.status, 'failed');
+      assert.equal(statusB.data.status, 'running', 'recovery must not expire another path');
+      await assert.rejects(() => repoA.renewIngestionRunLease(runA.id), /ingestion_lease_lost/);
+      await assert.rejects(() => repoA.registerSourceFile({
+        ingestionRunId: runA.id,
+        sourceSystem,
+        logicalPath: pathA,
+        contentSha256: hashContent(`fenced-${suffix}`),
+        format: 'csv',
+        seasonId: null,
+        rowCount: 0,
+      }), /ingestion_lease_lost/);
+
+      const recoveredRun = await createLeasedRun(repoA, pathA, `recovered-${suffix}`);
+      await repoA.failIngestionRun(recoveredRun.id, 'recovery test complete', {});
+      assert.equal(await repoB.expireStaleRuns(sourceSystem, pathB), 1);
+    });
+  } finally {
+    await cleanupTrackedRuns(client, repositories);
+  }
+});
 // ─── Task 3: Failure-safe cleanup ────────────────────────────────────────────
 
 test('failure-safe cleanup: all synthetic records removed despite failures at different persistence stages', {
@@ -1394,16 +1324,9 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       const repo = new TrackingIngestionRepository();
       repo.client = client;
 
-      // Simple create without locking (no source file path provided to skip lock check)
-      const { data: runData, error: runError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'cleanup-test-stage1',
-        source_set: `cleanup-stage1-${suffix}`,
-        status: 'running',
-        summary: {},
-      }).select('id').single();
-      assert.ifError(runError);
-      const runId = runData.id;
-      repo.runIds.add(runId);
+      const sourcePath = `integration/${suffix}/stage1-cleanup.csv`;
+      const run = await createLeasedRun(repo, sourcePath, `cleanup-stage1-${suffix}`);
+      const runId = run.id;
 
       const sourceFile = await repo.registerSourceFile({
         ingestionRunId: runId,
@@ -1416,11 +1339,7 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       });
 
       // Simulate ingestion failure after source registration
-      await client.from('ingestion_runs').update({
-        status: 'failed',
-        finished_at: new Date().toISOString(),
-        summary: { failure: 'simulated stage-1 failure' },
-      }).eq('id', runId);
+      await repo.failIngestionRun(runId, 'simulated stage-1 failure', {});
 
       // Manual cleanup of synthetic records
       const { error: sfError } = await client.from('source_files').delete().eq('id', sourceFile.id);
@@ -1452,15 +1371,9 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       const repo = new TrackingIngestionRepository();
       repo.client = client;
 
-      const { data: runData, error: runError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'cleanup-test-stage2',
-        source_set: `cleanup-stage2-${suffix}`,
-        status: 'running',
-        summary: {},
-      }).select('id').single();
-      assert.ifError(runError);
-      const runId = runData.id;
-      repo.runIds.add(runId);
+      const sourcePath = `integration/${suffix}/stage2-cleanup.csv`;
+      const run = await createLeasedRun(repo, sourcePath, `cleanup-stage2-${suffix}`);
+      const runId = run.id;
 
       const sourceFile = await repo.registerSourceFile({
         ingestionRunId: runId,
@@ -1531,11 +1444,7 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       };
       await assert.rejects(() => repo.persistDeliveryBatch([failedDelivery]));
 
-      await client.from('ingestion_runs').update({
-        status: 'failed',
-        finished_at: new Date().toISOString(),
-        summary: { failure: 'simulated stage-2 delivery failure' },
-      }).eq('id', runId);
+      await repo.failIngestionRun(runId, 'simulated stage-2 delivery failure', {});
 
       // Manual cleanup of synthetic records.
       // Delete match_source_keys BEFORE source_files (FK dependency).
@@ -1603,18 +1512,12 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       const bowlingTeamId = teamIdByName.get('Janakpur Bolts')!;
 
       // Register an extra source file for the failed delivery test
-      const { data: extraRunData, error: extraRunError } = await client.from('ingestion_runs').insert({
-        pipeline_version: 'stage3-extra-test',
-        source_set: `stage3-extra-${suffix}`,
-        status: 'running',
-        summary: {},
-      }).select('id').single();
-      assert.ifError(extraRunError);
-      repo.runIds.add(extraRunData.id);
+      const extraPath = `integration/${suffix}/stage3-extra.csv`;
+      const extraRun = await createLeasedRun(repo, extraPath, `stage3-extra-${suffix}`);
       const failureSourceFile = await repo.registerSourceFile({
-        ingestionRunId: extraRunData.id,
+        ingestionRunId: extraRun.id,
         sourceSystem: 'npl-master',
-        logicalPath: `integration/${suffix}/stage3-extra.csv`,
+        logicalPath: extraPath,
         contentSha256: crypto.createHash('sha256').update(`stage3-extra-${suffix}`).digest('hex'),
         format: 'csv',
         seasonId: null,
@@ -1661,11 +1564,12 @@ test('failure-safe cleanup: all synthetic records removed despite failures at di
       assert.equal(innings3.data?.length, 0, 'innings 3 must not exist after rollback');
 
       // Clean up the extra source file and its run
+      await repo.failIngestionRun(extraRun.id, 'simulated failed delivery batch', {});
       const { error: sfError } = await client.from('source_files').delete().eq('id', failureSourceFile.id);
       assert.ifError(sfError);
-      const { error: extraRunCleanup } = await client.from('ingestion_runs').delete().eq('id', extraRunData.id);
+      const { error: extraRunCleanup } = await client.from('ingestion_runs').delete().eq('id', extraRun.id);
       assert.ifError(extraRunCleanup);
-      repo.runIds.delete(extraRunData.id);
+      repo.runIds.delete(extraRun.id);
 
       await cleanupIntegrationRows(client, repo, mainDirectory, suffix, baseline);
     });

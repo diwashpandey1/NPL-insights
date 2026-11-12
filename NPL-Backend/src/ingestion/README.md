@@ -26,17 +26,18 @@ and relative logical file paths are retained for audit. Delivery sequence is
 the one-based source-row order within the canonical match and innings; repeated
 `ball_over` labels remain separate deliveries.
 
-Delivery identity in the database is `(match_id, innings_no, delivery_no)`.
-Changed file content gets a different source-file identity, while the
-delivery upsert reuses that canonical sequence and refreshes source provenance.
-There is no deletion reconciliation. The worker now rejects a changed delivery
-file whose total source row count is smaller than the most recently successful
-version, before persisting match or delivery changes. This prevents isolated
-tail and middle removals from shifting sequences or leaving stale tails, but
-does not identify a removal compensated by a new row when the file's total row
-count is unchanged. Treat such same-count replacements as ambiguous and do not
-ingest them; a full import remains blocked until stable source-record identity
-or an explicit reconciliation policy is implemented.
+The database key `(match_id, innings_no, delivery_no)` is the canonical
+source-order position used to replay identical input; it is not a stable
+delivery identifier supplied by the source. The inspected delivery CSV has no
+reviewed stable row ID. `ball_over` repeats for legitimate wides, no-balls, and
+other deliveries, and physical row order is only a locator. The worker
+therefore blocks any changed delivery-file content before canonical writes,
+records a blocking `delivery:source-identity-ambiguous` issue, and preserves
+the previous canonical data. This includes same-count row replacements.
+Additions, updates, and deletions cannot be safely reconciled until a human
+review establishes trustworthy source identity/mapping and a correction
+workflow is implemented. Do not infer identity from sequence position or
+`(match_id, inning, ball_over)`.
 
 ## Identity and persistence behavior
 
@@ -57,24 +58,46 @@ or an explicit reconciliation policy is implemented.
   blocked and require explicit reconciliation.
 - Source-file registration hashes file bytes and reconciles by source system,
   relative logical path, and SHA-256. An unchanged file from a successful run
-  is skipped for already processed canonical seasons. A changed file receives
-  a new source-file identity. Before registering a changed delivery file, the
-  repository reads the last successful source hash and row count; a smaller
-  changed file is failed and finalized before canonical writes. Existing
-  duplicate metadata is surfaced instead of silently selecting one row.
+  is skipped for already processed canonical seasons. Each run gets a new
+  source-file provenance row; prior rows are not reassigned or overwritten.
+  Any changed delivery-file hash is blocked and recorded as an issue before
+  canonical match or delivery persistence. Existing duplicate metadata is
+  surfaced instead of silently selecting one row.
 - Repository outcomes are `inserted`, `updated`, `unchanged`, or `rejected`.
   The report counters use only these returned outcomes. A failed atomic batch
   is counted as failed for every source record in that batch; retry uses the
   same match/innings/delivery keys.
 
-The `source_files.ingestion_run_id` column points at the most recently
-registered run for that content/path identity, rather than maintaining a
-many-run file history. Ingestion runs and issues remain separate audit records.
-The delivery-source crosswalk is a separate database request from the match
-row, but deliveries are not submitted unless that mapping succeeds. A full
-replay/versioned-reconciliation workflow for deletions from changed input is
-not implemented; this worker updates/reuses known canonical keys and preserves
-prior facts not present in the new file.
+`source_files.ingestion_run_id` preserves the run that registered that
+particular source version, maintaining per-run provenance history. Ingestion
+runs and issues remain separate audit records. The delivery-source crosswalk
+is a separate database request from the match row, but deliveries are not
+submitted unless that mapping succeeds. A full
+replay/versioned-reconciliation workflow for changed deliveries is not
+implemented.
+
+## Concurrency, leases, and recovery
+
+The database lease is keyed by `(source_system, logical_path)` and owned by one
+`ingestion_runs` row plus a unique token. A primary-key constraint prevents a
+second active lease for the same source path; different paths are independent.
+Acquisition and expiry recovery are serialized per source path, and the lease
+persists after the acquisition RPC transaction ends.
+
+The worker periodically renews its lease during ingestion. Renewal, release,
+and protected writes validate the run/token and unexpired lease. Successful
+completion and failure atomically update the run and release its lease.
+Expired leases are recovered only for the requested source path; recovery
+marks the abandoned run failed. Database fencing rejects a worker that
+continues after its lease expires or is taken over. There is no global
+age-based expiry operation or periodic global recovery job; a new acquisition
+for that same source path performs expired-lease recovery.
+
+The full ingestion run is not one transaction. Each persistence RPC/batch is
+atomic, but commits from an earlier stage are not automatically rolled back if
+a later unrelated stage fails. Changed delivery files are rejected before
+canonical writes, and tests verify that this rejection leaves canonical
+deliveries unchanged.
 
 ## Fielder source format
 
@@ -98,14 +121,16 @@ npm run ingest:season -- 2024/25
 npm run ingest:all
 ```
 
-For real PostgreSQL integration tests, start the disposable local Supabase
-stack, then set `NPL_LOCAL_SUPABASE_URL`, `NPL_LOCAL_SUPABASE_ANON_KEY`, and
-`NPL_LOCAL_SUPABASE_SERVICE_ROLE_KEY` from its local CLI status in the process
-environment. Never use hosted project credentials. `npm run test:integration`
-requires all three values, rejects non-loopback URLs, and exits with a
-`BLOCKED` status if the environment is unavailable. The regular `npm test`
-suite marks the database tests skipped when those values are absent; that is
-not database verification.
+For real PostgreSQL integration tests, start the local Supabase stack and put
+its local CLI URL and keys in `NPL-Backend/.env.local` as
+`NPL_LOCAL_SUPABASE_URL`, `NPL_LOCAL_SUPABASE_ANON_KEY`, and
+`NPL_LOCAL_SUPABASE_SERVICE_ROLE_KEY`. The integration runner resolves this
+file from its own project-relative path, so it works from either the backend
+directory or repository root. It never loads `.env`, rejects non-loopback
+URLs before creating a client, and does not fall back to hosted credentials.
+`npm run test:integration` exits with a `BLOCKED` status if the required local
+environment is unavailable. The regular `npm test` suite marks database tests
+skipped when those values are absent; that is not database verification.
 
 Generated reports are written under `.ingestion/`, which is ignored by Git.
 Report paths are relative logical paths; they do not include local absolute
@@ -115,52 +140,32 @@ crosswalk, but cannot verify database-backed aliases; reports mark this with
 
 ## Verification status (2026-11-11)
 
-Verified against the disposable local Supabase stack at commit
-`ec11d72dcf388ae4a50c0d120c8b0fb2d210aa85`. No hosted project was contacted.
+Verification for the lease and integrity changes:
 
-- Seven versioned migrations are applied in order. `supabase migration list
-  --local` reports each migration as applied; `supabase db lint --local`
-  reports no schema errors.
-- PostgreSQL catalog checks found 16 canonical tables, 16 primary keys,
-  35 foreign keys, 11 unique constraints, 53 checks, and 62 indexes. RLS is
-  enabled on all 16 tables. Service-role table grants and all five ingestion
-  RPC grants were verified; the RPCs are invoker functions and are not
-  executable by `anon` or `authenticated`.
-- `npm run typecheck` and `npm run build` — passed.
-- `npm test` — passed, 25 unit tests; the two PostgreSQL tests are skipped
-  without local credentials.
-- `npm run test:integration` without its required environment — correctly
-  reports `BLOCKED` and exits nonzero. With loopback-only local credentials,
-  it passed twice in separate executions (2/2 tests each): service-role
-  persistence, source replay, delivery/dismissal/fielder changes, additions,
-  tail and middle deletion blocking, source sequence stability, atomic batch
-  rollback/retry, and anonymous/authenticated permission denials.
-- Test teardown removed the fixture's source files, matches, deliveries,
-  innings, dismissals, aliases, player/season fixtures, ingestion issues/runs,
-  and temporary auth user. Post-run catalog queries found zero test-scoped
-  rows. Legacy records from earlier unscoped test executions were inspected
-  by their temporary fixture paths and removed from this disposable database.
+- `npm run typecheck`, `npm run build`, and `npm test` passed from
+  `NPL-Backend/`. The unit run reported 26 passed and six database tests
+  skipped because `npm test` does not load `.env.local`.
+- `npm run test:integration` passed twice: once invoked from the repository
+  root and once from `NPL-Backend/`; each run reported 15 passed and zero
+  skipped. This includes same-count blocking/canonical-state checks,
+  provenance and idempotency, concurrent and independent source leases,
+  success/failure release, renewal, expiry recovery/fencing, and a real worker
+  heartbeat that runs longer than a one-second lease.
+- `npx supabase migration list --local` reports all ten migrations applied.
+  `npx supabase db lint --local` reports no schema errors.
+- A local catalog/access check found 17 public tables with RLS enabled, no
+  public policies, and service-role lease access only. Anonymous and
+  authenticated roles cannot read the lease table or execute its acquisition
+  RPC.
+- After both integration runs, a local read-only cleanup check found zero
+  marked synthetic runs, source files, or remaining leases. Older, explicitly
+  test-marked fixtures from prior local executions were also removed; no
+  database reset was used.
 
-The regular test suite's skipped database tests are not a pass. These local
-integration results do not authorize a production import. A same-row-count
-source replacement can conceal a deletion because the source has no stable
-record identifier; such files remain ambiguous and must not be ingested until
-a full reconciliation policy is implemented.
-
-## Interrupted ingestion runs
-
-There is no heartbeat, stale-run detector, or automatic recovery job. A forced
-process interruption can leave an `ingestion_runs` row with `status = 'running'`
-and no `finished_at`. Operators can identify candidates by querying running
-rows and their `started_at`, then confirm the worker is no longer active and
-inspect its issues/source records before manually reconciling the run. Do not
-mark a run failed based on age alone. Atomic delivery batch rollback and safe
-retry were exercised against local PostgreSQL; forced process interruption
-and stale-run recovery automation remain untested and unimplemented.
-
-Do not point ingestion at hosted Supabase until separately authorized. Phase 2
-is not approved for a controlled full import until same-count deletion
-ambiguity is resolved and stale-run recovery behavior is addressed.
+Local tests do not authorize a production import. Do not point ingestion at
+hosted Supabase until separately authorized. Same-count and other changed
+delivery-file corrections remain blocked pending source-level identity review
+and an audited reconciliation design.
 
 ## Known limitations
 
@@ -170,9 +175,11 @@ ambiguity is resolved and stale-run recovery behavior is addressed.
   `player_season_teams`, or import standings/source-file contents.
 - Unknown player names remain unresolved. Existing reviewed `player_aliases`
   must be loaded separately before those player foreign keys can resolve.
-- Deleted source rows are not reconciled or removed from canonical tables.
-  Decreased-row-count delivery files are blocked before canonical writes;
-  same-count replacements remain ambiguous.
-- Stale `running` jobs require manual identification and reconciliation.
+- Changed delivery files are blocked before canonical writes because source
+  rows lack a reviewed stable identity. No safe correction workflow is
+  available yet.
+- Interrupted jobs recover after lease expiration when that source path is
+  next acquired. There is no global expiry sweep; old workers are fenced from
+  writes after expiry/takeover.
 - No hosted database verification has been performed. Do not treat local
   synthetic test results as authorization for hosted ingestion.
